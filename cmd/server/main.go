@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
+	"path/filepath"
 	"github.com/anton-chornobai/beton.git/cmd/config"
 	"github.com/anton-chornobai/beton.git/internal/db"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
@@ -16,16 +16,20 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	db := db.Connect(cfg.DBPath)
-	defer db.Close()
+	dbPath, err := filepath.Abs(cfg.DBPath)
 
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("SQLite DB path:", dbPath)
+	db := db.Connect(dbPath)
+	
+	defer db.Close()
 
 	userRepo := infra.UserRepository{DB: db}
 	userDomainServices := domain.NewService(&userRepo)
 	userAppService := application.NewUserService(userDomainServices)
-
-
-
 
 	handler := routes.SetUpRouter(userAppService)
 

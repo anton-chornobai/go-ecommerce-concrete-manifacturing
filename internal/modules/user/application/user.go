@@ -23,3 +23,14 @@ func (r *UserAppService) Register(user domain.AuthenticationUserRequest) (domain
 
 	return  registeredUser, nil
 }
+
+func (r *UserAppService) GetByPhone(number string) (domain.User, error) {
+	user, err := r.service.GetByPhone(number)
+
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return  user, nil
+}	
+

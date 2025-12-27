@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const phoneNumberLength = 9
+
 type Service struct {
 	repo Repository
 }
@@ -50,3 +52,16 @@ func (s *Service) Register(user AuthenticationUserRequest) (RegisterResult, erro
 	}, nil
 }
 
+func (s *Service) GetByPhone(number string) (User, error) {
+	if number == "" || len(number) < phoneNumberLength {
+		return User{}, errors.New("invalid number argument")
+	}
+	
+	user, err := s.repo.GetByPhone(number) 
+
+	if err != nil {
+		return User{}, err
+	}
+	
+	return user, nil
+}

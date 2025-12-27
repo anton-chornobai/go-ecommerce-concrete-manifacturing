@@ -2,25 +2,31 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 )
 
+type UsersHandler struct {
+	UserService *application.UserAppService
+}
 
-func RegisterUser(userService *application.UserAppService) http.HandlerFunc {
+func (s *UsersHandler) RegisterUser() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var number domain.AuthenticationUserRequest
 
 		if err := json.NewDecoder(r.Body).Decode(&number); err != nil {
 			http.Error(w, "invalid request payload", http.StatusBadRequest)
+			return 
 		}
 
-		registerResult, err := userService.Register(number) 
+		registerResult, err := s.UserService.Register(number) 
 
 		if err != nil {
-			return  
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		http.SetCookie(w, &http.Cookie{
@@ -38,6 +44,36 @@ func RegisterUser(userService *application.UserAppService) http.HandlerFunc {
 		if err := json.NewEncoder(w).Encode(map[string]any{
 			"user":    registerResult.User,
 			"message": "User created successfully",
+		}); err != nil {
+			http.Error(w, "failed to encode response: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+}
+
+func (s *UsersHandler) User() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var number struct{Number string}
+
+		err := json.NewDecoder(r.Body).Decode(&number)
+		if err != nil {
+			http.Error(w, "invalid argument", http.StatusBadRequest)
+			return 
+		}
+
+		user, err := s.UserService.GetByPhone(number.Number)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "invalid argument", http.StatusInternalServerError)
+			return 
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		if err := json.NewEncoder(w).Encode(map[string]any { 
+			"user":    user,
+			"message": "User",
 		}); err != nil {
 			http.Error(w, "failed to encode response: "+err.Error(), http.StatusInternalServerError)
 			return
