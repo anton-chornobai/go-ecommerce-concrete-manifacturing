@@ -76,13 +76,35 @@ func (o *OrdersRepository) Orders(limit int) ([]domain.Order, error) {
 
 func (o *OrdersRepository) Save(order *domain.Order) error {
 	result, err := o.DB.Exec(`
-		INSERT INTO orders (user_id, name, items, total, status, discount, created_at) VALUES (?, ?, ?, ?, ?, ?)
-	`, order.UserID, order.Name, order.Items, order.Total, order.Status, order.Discount, order.CreatedAt)
+		INSERT INTO orders (user_id, name, total, status, discount, created_at) VALUES ( ?, ?, ?, ?, ?, ?);
+	`, order.UserID, order.Name, order.Total, order.Status, order.Discount, order.CreatedAt)
 
 	if err != nil {
 		return err
 	}
 
+	for _, item := range order.Items {
+		_, err := o.DB.Exec(`
+			INSERT INTO order_items
+			(order_id, product_id, title, unit_price, type, quantity, color, height, width, material, thickness)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`,
+			order.ID,
+			item.ProductID,
+			item.Title,
+			item.UnitPrice,
+			item.Type,
+			item.Quantity,
+			item.Color,
+			item.Height,
+			item.Width,
+			item.Material,
+			item.Thickness,
+		)
+		if err != nil {
+			return err
+		}
+	}
 	generatedId, err := result.LastInsertId()
 
 	if err != nil {

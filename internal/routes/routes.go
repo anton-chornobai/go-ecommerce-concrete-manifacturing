@@ -6,15 +6,18 @@ import (
 	"github.com/anton-chornobai/beton.git/internal/handlers"
 	"github.com/anton-chornobai/beton.git/internal/middleware"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
+	ordersApp "github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 )
 
 
-func SetUpRouter(userAppService *application.UserAppService) http.Handler  {
+func SetUpRouter(userAppService *application.UserAppService, ordersAppService *ordersApp.OrderService) http.Handler  {
 	usersHandler := handlers.UsersHandler {
 		UserService: userAppService,
 	}
 
-	ordersHadnler := &handlers.OrdersHandler{}
+	ordersHandler := handlers.OrdersHandler {
+		OrdersService: ordersAppService,
+	}
 	router := http.NewServeMux()
 
 	router.HandleFunc("POST /auth", usersHandler.Register())
@@ -28,10 +31,7 @@ func SetUpRouter(userAppService *application.UserAppService) http.Handler  {
         w.Write([]byte("Admin root"))
     })
 	
-
-	router.HandleFunc("GET /admin/orders", ordersHadnler.GetOrders())
-
-	
+	router.HandleFunc("POST /orders", ordersHandler.Create())
 
 	return  middleware.CorsMiddleware(router)
 }

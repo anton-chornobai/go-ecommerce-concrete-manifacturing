@@ -3,13 +3,20 @@ package application
 import "github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
 
 type OrderService struct {
-	repo domain.OrderRepository
+	Repo domain.OrderRepository
 }
 
 type CreateOrderRequest struct {
-	UserID   string
-	Items    []domain.OrderItem
-	Discount int
+	UserID   string `json:"user_id"`
+	Name 	string  `json:"name"`
+	Items    []domain.OrderItem `json:"items"`
+	Discount int `json:"discount"`
+}
+
+func NewOrderService(repo domain.OrderRepository) *OrderService {
+	return &OrderService{
+		Repo: repo,
+	}
 }
 
 func (o *OrderService) Orders(limit int) {
@@ -23,7 +30,7 @@ func (o *OrderService) Create(req CreateOrderRequest) (*domain.Order, error) {
 		return nil, nil
 	}
 
-	err = o.repo.Save(order); 
+	err = o.Repo.Save(order); 
 
 	if err != nil {
 		return nil, err;

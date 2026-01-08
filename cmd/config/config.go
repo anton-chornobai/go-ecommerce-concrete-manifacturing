@@ -1,24 +1,30 @@
 package config
 
 import (
-	"log"
 	"os"
-
-	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v2"
 )
 
-type Config struct {
-	DBPath string
-	Port   string
+type AppConfig struct {
+	Secret string `yaml:"secret"`
+	DBPath string `yaml:"db_path"`
+	Port   string    `yaml:"port"`
 }
 
-func LoadConfig() *Config {
-	if err := godotenv.Load("../../.env"); err != nil {
-		log.Println("No .env file found")
+type Config struct {
+	App AppConfig `yaml:"app"`
+}
+
+func LoadConfig(path string) (*Config, error)  {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
 	}
 
-	return &Config{
-		DBPath: os.Getenv("DB_PATH"),
-		Port:   ":" + os.Getenv("PORT"),
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
 	}
+
+	return &cfg, nil
 }

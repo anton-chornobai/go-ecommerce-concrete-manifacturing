@@ -12,26 +12,27 @@ type Size struct {
 }
 
 type OrderItem struct {
-	ProductID int    `db:"product_id"`
-	Title     string `db:"title"`
-	UnitPrice int    `db:"unit_price"`
-	Type      string `db:"type"`
-	Quantity  int    `db:"quantity"`
-	Color     string `db:"color"`
-	Height    int    `db:"height"`
-	Width     int    `db:"width"`
-	Material  string `db:"material"`
-	Thickness int    `db:"thickness"`
+	ProductID int    `db:"product_id" json:"product_id"`
+	Title     string `db:"title" json:"title"`
+	UnitPrice int    `db:"unit_price" json:"unit_price"`
+	Type      string `db:"type" json:"type"`
+	Quantity  int    `db:"quantity" json:"quantity"`
+	Color     string `db:"color" json:"color"`
+	Height    int    `db:"height" json:"height"`
+	Width     int    `db:"width" json:"width"`
+	Material  string `db:"material" json:"material"`
+	Thickness int    `db:"thickness" json:"thickness"`
 }
+
 type Order struct {
-	ID        int
-	UserID    string
-	Name 	  string
-	Items     []OrderItem
-	Total     int
-	Status    string
-	CreatedAt time.Time
-	Discount  int
+	ID        int         `json:"id"`
+	UserID    string      `json:"user_id"`
+	Name      string      `json:"name"`
+	Items     []OrderItem `json:"items"`
+	Total     int         `json:"total"`
+	Status    string      `json:"status"`
+	CreatedAt time.Time   `json:"created_at"`
+	Discount  int         `json:"discount"`
 }
 
 func NewOrder(userId string, items []OrderItem, discount int) (*Order, error) {
