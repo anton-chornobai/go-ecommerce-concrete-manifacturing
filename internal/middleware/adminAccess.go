@@ -1,5 +1,28 @@
 package middleware
 
+import "fmt"
+
+type Animal interface {
+	Breath() (string)
+}
+
+type Dog struct {
+	name string
+}
+
+func (d Dog) Breath() (string) {
+	return "breathing..."
+}
+
+func main()  {
+	var unknownDog Animal
+	myDog := Dog{name: "Bobik"}
+	unknownDog = &myDog;
+
+	fmt.Println(unknownDog)
+	
+}
+
 // import (
 // 	"fmt"
 // 	"net/http"

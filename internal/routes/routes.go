@@ -17,13 +17,13 @@ func SetUpRouter(userAppService *application.UserAppService) http.Handler  {
 	ordersHadnler := &handlers.OrdersHandler{}
 	router := http.NewServeMux()
 
-	router.HandleFunc("POST /auth", usersHandler.RegisterUser())
+	router.HandleFunc("POST /auth", usersHandler.Register())
 	router.Handle("GET /profile", middleware.VerifyToken(handlers.GetProfile()))
 	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Products"))
 	})
-	router.HandleFunc("GET /user", usersHandler.User())
+	router.HandleFunc("GET /user", usersHandler.GetByPhone())
     router.HandleFunc("GET /admin", func(w http.ResponseWriter, r *http.Request) {
         w.Write([]byte("Admin root"))
     })

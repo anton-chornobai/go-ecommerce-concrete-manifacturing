@@ -18,7 +18,7 @@ type AuthenticationUserRequest struct {
 }
 
 type AuthenticationUserCreated struct {
-	Number string `json:"number"`
+	Number string `json:"number"` 
 	Role string `json:"role"`
 	ID string `json:"id"`
 }

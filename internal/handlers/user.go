@@ -13,7 +13,7 @@ type UsersHandler struct {
 	UserService *application.UserAppService
 }
 
-func (s *UsersHandler) RegisterUser() http.HandlerFunc {
+func (s *UsersHandler) Register() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var number domain.AuthenticationUserRequest
 
@@ -51,7 +51,7 @@ func (s *UsersHandler) RegisterUser() http.HandlerFunc {
 	})
 }
 
-func (s *UsersHandler) User() http.HandlerFunc {
+func (s *UsersHandler) GetByPhone() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var number struct{Number string}
 
