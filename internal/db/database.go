@@ -13,6 +13,5 @@ func Connect(path string) *sql.DB {
 		log.Fatalf("Failde to open db, %v", err)
 	}
 	
-
 	return db
 }

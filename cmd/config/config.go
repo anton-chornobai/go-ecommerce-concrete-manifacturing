@@ -1,21 +1,21 @@
 package config
 
 import (
-	"os"
 	"gopkg.in/yaml.v2"
+	"os"
 )
 
 type AppConfig struct {
 	Secret string `yaml:"secret"`
 	DBPath string `yaml:"db_path"`
-	Port   string    `yaml:"port"`
+	Port   int `yaml:"port"`
 }
 
 type Config struct {
 	App AppConfig `yaml:"app"`
 }
 
-func LoadConfig(path string) (*Config, error)  {
+func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

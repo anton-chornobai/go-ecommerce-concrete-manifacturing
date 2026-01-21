@@ -1,11 +1,12 @@
 package training
 
 import (
-	// "fmt"
-
+	"fmt"
 )
 
 func asads() {
 
-}
+	s := 10
 
+	fmt.Println(s)
+}
