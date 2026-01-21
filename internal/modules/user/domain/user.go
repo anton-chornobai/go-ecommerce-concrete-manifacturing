@@ -1,6 +1,11 @@
 package domain
 
-import "github.com/golang-jwt/jwt/v5"
+
+import (
+	"errors"
+	"github.com/google/uuid"
+	"github.com/golang-jwt/jwt/v5"
+)
 
 type User struct {
 	ID string `json:"id"`
@@ -28,4 +33,29 @@ type Claims struct {
 	Role string `json:"role"`
 	ID string `json:"id"`
 	jwt.RegisteredClaims
+}
+
+type RegisterResult struct {
+    User  UserCreated
+    Token string
+}
+
+const phoneNumberLength = 9
+
+type UserCreated struct {
+	ID     string
+	Role   string
+	Number string
+}
+
+func NewUserCreated(number string) (*UserCreated, error) {
+	if number == "" || len(number) < phoneNumberLength {
+		return nil, errors.New("invalid phone number")
+	}
+
+	return &UserCreated{
+		ID:     uuid.NewString(),
+		Role:   "user",
+		Number: number,
+	}, nil
 }

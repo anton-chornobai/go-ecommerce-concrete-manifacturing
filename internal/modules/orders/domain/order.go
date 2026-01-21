@@ -35,12 +35,6 @@ type Order struct {
 	Discount  int         `json:"discount"`
 }
 
-
-func NewOrderService()  {
-
-}
-
-
 func NewOrder(userId string, items []OrderItem, discount int) (*Order, error) {
 	if userId == "" {
 		return nil, errors.New("userID is required")

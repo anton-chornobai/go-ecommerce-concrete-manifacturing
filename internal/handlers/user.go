@@ -10,7 +10,7 @@ import (
 )
 
 type UsersHandler struct {
-	UserService *application.UserAppService
+	UserService *application.UserService
 }
 
 func (s *UsersHandler) Register() http.HandlerFunc {
@@ -19,10 +19,10 @@ func (s *UsersHandler) Register() http.HandlerFunc {
 
 		if err := json.NewDecoder(r.Body).Decode(&number); err != nil {
 			http.Error(w, "invalid request payload", http.StatusBadRequest)
-			return 
+			return
 		}
 
-		registerResult, err := s.UserService.Register(number) 
+		registerResult, err := s.UserService.Register(number)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -53,25 +53,25 @@ func (s *UsersHandler) Register() http.HandlerFunc {
 
 func (s *UsersHandler) GetByPhone() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var number struct{Number string}
+		var number struct{ Number string }
 
 		err := json.NewDecoder(r.Body).Decode(&number)
 		if err != nil {
 			http.Error(w, "invalid argument", http.StatusBadRequest)
-			return 
+			return
 		}
 
 		user, err := s.UserService.GetByPhone(number.Number)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "invalid argument", http.StatusInternalServerError)
-			return 
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		if err := json.NewEncoder(w).Encode(map[string]any { 
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"user":    user,
 			"message": "User",
 		}); err != nil {

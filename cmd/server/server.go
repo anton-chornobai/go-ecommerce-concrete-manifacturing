@@ -11,7 +11,6 @@ import (
 	ordersApp "github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	ordersRepo "github.com/anton-chornobai/beton.git/internal/modules/orders/infra"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
-	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
 	"github.com/anton-chornobai/beton.git/internal/routes"
 )
@@ -27,9 +26,8 @@ func main() {
 
 	defer db.Close()
 
-	userRepo := infra.UserRepository{DB: db}
-	userDomainServices := domain.NewService(&userRepo)
-	userAppService := application.NewUserService(userDomainServices)
+	userRepo := &infra.UserRepository{DB: db}
+	userAppService := application.NewUserService(userRepo)
 
 	ordersRepo := &ordersRepo.OrdersRepository{DB: db}
 	orderService := ordersApp.NewOrderService(ordersRepo)

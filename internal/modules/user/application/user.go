@@ -2,35 +2,39 @@ package application
 
 import (
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
+	"github.com/anton-chornobai/beton.git/internal/utils"
 )
 
-type UserAppService struct {
-	service *domain.Service
+type UserService struct {
+	repo domain.Repository
 }
 
-func NewUserService(service *domain.Service) *UserAppService {
-	return &UserAppService{
-		service: service,
-	}
+func NewUserService(repo domain.Repository) *UserService {
+	return &UserService{repo: repo}
 }
 
-func (r *UserAppService) Register(user domain.AuthenticationUserRequest) (domain.RegisterResult, error) {
-	registeredUser, err := r.service.Register(user)
+func (s *UserService) Register(req domain.AuthenticationUserRequest) (domain.RegisterResult, error) {
+	user, err := domain.NewUserCreated(req.Number)
 
 	if err != nil {
 		return domain.RegisterResult{}, err
 	}
 
-	return  registeredUser, nil
-}
-
-func (r *UserAppService) GetByPhone(number string) (domain.User, error) {
-	user, err := r.service.GetByPhone(number)
-
+	token, err := utils.GenerateToken(user.ID, user.Role)
 	if err != nil {
-		return domain.User{}, err
+		return domain.RegisterResult{}, err
 	}
 
-	return  user, nil
-}	
+	if err := s.repo.Create(*user); err != nil {
+		return domain.RegisterResult{}, err
+	}
 
+	return domain.RegisterResult{
+		User:  *user,
+		Token: token,
+	}, nil
+}
+
+func (s *UserService) GetByPhone(number string) (domain.User, error) {
+	return s.repo.GetByPhone(number)
+}

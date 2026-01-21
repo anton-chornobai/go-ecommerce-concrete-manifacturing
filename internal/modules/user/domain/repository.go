@@ -1,6 +1,6 @@
 package domain
 
 type Repository interface {
-	Create(user User) (error)
+	Create(user UserCreated) (error)
 	GetByPhone(number string) (User, error)
 }	

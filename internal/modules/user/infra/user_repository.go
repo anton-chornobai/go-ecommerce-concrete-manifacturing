@@ -11,7 +11,7 @@ type UserRepository struct {
 	DB *sql.DB
 }
 
-func (r *UserRepository) Create(user domain.User) error {
+func (r *UserRepository) Create(user domain.UserCreated) error {
 	_, err := r.DB.Exec(
 		`INSERT INTO users (id, number, role) VALUES (?, ?, ?)`,
 		user.ID,
