@@ -7,10 +7,10 @@ type OrderService struct {
 }
 
 type CreateOrderRequest struct {
-	UserID   string `json:"user_id"`
-	Name 	string  `json:"name"`
+	UserID   string             `json:"user_id"`
+	Name     string             `json:"name"`
 	Items    []domain.OrderItem `json:"items"`
-	Discount int `json:"discount"`
+	Discount int                `json:"discount"`
 }
 
 func NewOrderService(repo domain.OrderRepository) *OrderService {
@@ -30,10 +30,10 @@ func (o *OrderService) Create(req CreateOrderRequest) (*domain.Order, error) {
 		return nil, nil
 	}
 
-	err = o.Repo.Save(order); 
+	err = o.Repo.Save(order)
 
 	if err != nil {
-		return nil, err;
+		return nil, err
 	}
 
 	return order, nil

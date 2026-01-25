@@ -6,9 +6,10 @@ import (
 )
 
 type AppConfig struct {
+	Env 	string `yaml:"env"`
 	Secret string `yaml:"secret"`
 	DBPath string `yaml:"db_path"`
-	Port   int `yaml:"port"`
+	Port   int    `yaml:"port"`
 }
 
 type Config struct {

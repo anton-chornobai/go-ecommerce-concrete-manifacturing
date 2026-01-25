@@ -1,9 +1,8 @@
 package middleware
 
 import (
-	"net/http"
 	"github.com/anton-chornobai/beton.git/internal/utils"
-
+	"net/http"
 )
 
 func VerifyToken(next http.Handler) http.Handler {
@@ -12,15 +11,14 @@ func VerifyToken(next http.Handler) http.Handler {
 
 		if err != nil {
 			http.Error(w, "unauthenticated", http.StatusUnauthorized)
-			return 
+			return
 		}
-
 
 		claims, err := utils.ValidateToken(cookie.Value)
 
 		if err != nil {
 			http.Error(w, "invalid token", http.StatusUnauthorized)
-			return 
+			return
 		}
 
 		ctx := utils.AddClaimsToContext(r.Context(), claims)
@@ -28,4 +26,3 @@ func VerifyToken(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
-

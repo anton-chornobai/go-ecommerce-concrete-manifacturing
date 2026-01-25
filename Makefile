@@ -1,6 +1,6 @@
-APP_NAME := mya
+GO_FILES := $(wildcard *.go)
 
-format: 
-	go fmt
+formatall:
+	go fmt ./...
 lint:
 	golangci-lint run

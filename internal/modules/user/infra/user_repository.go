@@ -2,13 +2,14 @@ package infra
 
 import (
 	"database/sql"
-	"log"
+	"log/slog"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 )
 
 type UserRepository struct {
 	DB *sql.DB
+	Logger *slog.Logger
 }
 
 func (r *UserRepository) Create(user domain.UserCreated) error {
@@ -20,9 +21,14 @@ func (r *UserRepository) Create(user domain.UserCreated) error {
 	)
 
 	if err != nil {
-		log.Printf("RegisterUser error: %+v", err)
+		r.Logger.Error("Failed to insert user", "err", err)
 	}
 
+	r.Logger.Info(
+		"User Created",
+		slog.String("user_id", user.ID),
+		slog.String("user_role", user.Role),
+	)
 	return err 
 }
 
@@ -43,6 +49,7 @@ func (r *UserRepository) GetByPhone(number string) (domain.User, error) {
 	)
 
 	if err != nil {
+		r.Logger.Warn("Failed to scan user row", "err:", err, "phone", number)
 		return domain.User{}, err
 	}
 

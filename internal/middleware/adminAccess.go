@@ -3,24 +3,24 @@ package middleware
 import "fmt"
 
 type Animal interface {
-	Breath() (string)
+	Breath() string
 }
 
 type Dog struct {
 	name string
 }
 
-func (d Dog) Breath() (string) {
+func (d Dog) Breath() string {
 	return "breathing..."
 }
 
-func main()  {
+func main() {
 	var unknownDog Animal
 	myDog := Dog{name: "Bobik"}
-	unknownDog = &myDog;
+	unknownDog = &myDog
 
 	fmt.Println(unknownDog)
-	
+
 }
 
 // import (
@@ -33,7 +33,7 @@ func main()  {
 
 // func VerifyAdminAccess(http.Handler) http.Handler  {
 // 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		
+
 // 		cookie, err := r.Cookie("jwt")
 
 // 		if err != nil {

@@ -52,10 +52,10 @@ func NewOrder(userId string, items []OrderItem, discount int) (*Order, error) {
 	total -= total * discount
 
 	return &Order{
-		UserID:     userId,
-		Items:      items,
-		Total: total,
-		Status:     "created",
-		CreatedAt:  time.Now(),
+		UserID:    userId,
+		Items:     items,
+		Total:     total,
+		Status:    "created",
+		CreatedAt: time.Now(),
 	}, nil
 }

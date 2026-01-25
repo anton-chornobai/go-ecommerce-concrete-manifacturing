@@ -2,8 +2,8 @@ package db
 
 import (
 	"database/sql"
-	"log"
 	_ "github.com/mattn/go-sqlite3"
+	"log"
 )
 
 func Connect(path string) *sql.DB {
@@ -12,6 +12,6 @@ func Connect(path string) *sql.DB {
 	if err != nil {
 		log.Fatalf("Failde to open db, %v", err)
 	}
-	
+
 	return db
 }
