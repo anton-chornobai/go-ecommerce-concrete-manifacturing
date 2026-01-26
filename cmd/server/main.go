@@ -30,13 +30,10 @@ func main() {
 		log.Fatal(err)
 
 	}
-
 	cfg, err := config.LoadConfig("../../configs/app.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(os.Environ())
-	fmt.Println("SECRET =", os.Getenv("SECRET"))
 
 	logger := setupLogger(cfg.App.Env)
 
@@ -48,8 +45,8 @@ func main() {
 	userRepo := &infra.UserRepository{DB: db, Logger: logger}
 	userAppService := application.NewUserService(userRepo, logger)
 
-	ordersRepo := &ordersRepo.OrdersRepository{DB: db}
-	orderService := ordersApp.NewOrderService(ordersRepo)
+	ordersRepo := &ordersRepo.OrdersRepository{DB: db, Logger: logger}
+	orderService := ordersApp.NewOrderService(ordersRepo, logger)
 
 	handler := routes.SetUpRouter(userAppService, orderService)
 
