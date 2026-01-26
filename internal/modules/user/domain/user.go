@@ -10,8 +10,9 @@ type User struct {
 	ID        string `json:"id"`
 	Number    string `json:"number"`
 	Role      string `json:"role"`
-	CreatedAt int    `json:"created_at"`
-	Email     string `json:"email,omitempty"`
+	CreatedAt string `json:"created_at"`
+	Email     *string `json:"email,omitempty"`
+	Password  string `json:"password"`
 	Address   string `json:"adress,omitempty"`
 	Name      string `json:"name,omitempty"`
 	Surname   string `json:"surname,omitempty"`
@@ -47,6 +48,13 @@ type UserCreated struct {
 	Number string
 }
 
+type UserCreatedWithEmail struct {
+	ID     string
+	Role   string
+	Email string
+	Password string
+}
+
 func CreateUser(number string) (*UserCreated, error) {
 	if number == "" || len(number) < phoneNumberLength {
 		return nil, errors.New("invalid phone number")
@@ -57,4 +65,13 @@ func CreateUser(number string) (*UserCreated, error) {
 		Role:   "user",
 		Number: number,
 	}, nil
+}
+
+func CreateUserWithEmail(email, password string) (*UserCreatedWithEmail) {
+	return &UserCreatedWithEmail{
+		ID:     uuid.NewString(),
+		Role:   "user",
+		Email: email,
+		Password: password,
+	}
 }

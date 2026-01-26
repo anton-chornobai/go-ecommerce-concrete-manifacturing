@@ -4,7 +4,7 @@ CREATE TABLE orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    total INTEGER,
+    total INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'pending',
     order_name TEXT NOT NULL DEFAULT '',
     discount INTEGER NOT NULL DEFAULT 0,
@@ -16,7 +16,8 @@ CREATE TABLE users (
     id TEXT PRIMARY KEY,
     number TEXT NOT NULL UNIQUE,
     role TEXT NOT NULL,
-    email TEXT NOT NULL DEFAULT '',
+    email TEXT DEFAULT '',
+    password TEXT 
     address TEXT NOT NULL DEFAULT '',
     name TEXT NOT NULL DEFAULT '',
     surname TEXT NOT NULL DEFAULT '',

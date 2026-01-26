@@ -49,9 +49,50 @@ func (r *UserRepository) GetByPhone(number string) (domain.User, error) {
 	)
 
 	if err != nil {
-		r.Logger.Warn("Failed to scan user row", "err:", err, "phone", number)
+		r.Logger.Warn("Failed to scan user row by phone", "err:", err, "phone", number)
 		return domain.User{}, err
 	}
 
 	return user, nil
+}
+
+func (r *UserRepository) GetByEmail(email string) (domain.User, error) {
+	var user domain.User 
+
+	row := r.DB.QueryRow(
+		"SELECT id, number, name, surname, role, email, created_at, address FROM users WHERE email=?", email,
+	)
+
+	err := row.Scan(
+		&user.ID,
+		&user.Number,
+		&user.Name,
+		&user.Surname,
+		&user.Role,
+		&user.Email,
+		&user.CreatedAt,
+		&user.Address,
+	)
+
+	if err != nil {
+
+		
+		r.Logger.Warn("Failed to scan user row by email", "err:", err)
+		return domain.User{}, err
+	}
+
+	return user, nil
+}
+
+func (r *UserRepository) SignUpByEmail(user *domain.UserCreatedWithEmail) error  {
+	_, err := r.DB.Exec(
+		`INSERT INTO users (id, role, email, password) VALUES (?, ?, ?, ?)`, user.ID, user.Role, user.Email, user.Password,
+	)
+
+	if err != nil {
+		r.Logger.Warn("Failed to scan user row by email", "err:", err)
+		return  err;
+	}
+
+	return  nil
 }

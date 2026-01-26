@@ -45,11 +45,15 @@ func NewOrder(userId string, items []OrderItem, discount int) (*Order, error) {
 	}
 
 	total := 0
+
 	for _, item := range items {
 		total += item.UnitPrice * item.Quantity
 	}
 
-	total -= total * discount
+	if discount > 0 {
+        discountAmount := total * discount / 100
+        total -= discountAmount
+    }
 
 	return &Order{
 		UserID:    userId,
