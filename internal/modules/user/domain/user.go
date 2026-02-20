@@ -7,15 +7,15 @@ import (
 )
 
 type User struct {
-	ID        string `json:"id"`
-	Number    string `json:"number"`
-	Role      string `json:"role"`
-	CreatedAt string `json:"created_at"`
-	Email     *string `json:"email,omitempty"`
-	Password  string `json:"password"`
-	Address   string `json:"adress,omitempty"`
-	Name      string `json:"name,omitempty"`
-	Surname   string `json:"surname,omitempty"`
+	ID        string
+	Number    string 
+	Role      string 
+	CreatedAt string 
+	Email     *string 
+	Password  string
+	Address   string
+	Name      string 
+	Surname   string 
 }
 
 type AuthenticationUserRequest struct {

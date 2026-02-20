@@ -2,7 +2,6 @@ package infra
 
 import (
 	"database/sql"
-	"log/slog"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
 	// "errors"
@@ -11,7 +10,6 @@ import (
 
 type OrdersRepository struct {
 	DB *sql.DB
-	Logger *slog.Logger
 }
 
 func (o *OrdersRepository) Orders(limit int) ([]domain.Order, error) {

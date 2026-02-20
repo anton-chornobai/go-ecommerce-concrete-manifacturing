@@ -2,30 +2,20 @@ package main
 
 import (
 	"fmt"
-	"github.com/anton-chornobai/beton.git/cmd/config"
-	"github.com/anton-chornobai/beton.git/internal/db"
-	ordersApp "github.com/anton-chornobai/beton.git/internal/modules/orders/application"
-	ordersRepo "github.com/anton-chornobai/beton.git/internal/modules/orders/infra"
-	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
-	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
-	"github.com/anton-chornobai/beton.git/internal/routes"
-	"github.com/joho/godotenv"
-	"log"
-	"log/slog"
-	"net/http"
-	"os"
-	"strconv"
-)
 
-const (
-	envLocal = "local"
-	envDev   = "dev"
-	envProd  = "prod"
+	"log"
+	"net/http"
+	"strconv"
+
+	"github.com/anton-chornobai/beton.git/internal/boostrap"
+	"github.com/anton-chornobai/beton.git/internal/config"
+	"github.com/anton-chornobai/beton.git/internal/db"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	err := godotenv.Load("../../.env")
-	
+
 	if err != nil {
 		log.Fatal(err)
 
@@ -35,48 +25,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logger := setupLogger(cfg.App.Env)
+	// logger := config.SetupLogger(cfg.App.Env)
 
 	log.Println("SQLite DB path:", cfg.App.DBPath)
 	db := db.Connect(cfg.App.DBPath)
 
 	defer db.Close()
 
-	userRepo := &infra.UserRepository{DB: db, Logger: logger}
-	userAppService := application.NewUserService(userRepo, logger)
-
-	ordersRepo := &ordersRepo.OrdersRepository{DB: db, Logger: logger}
-	orderService := ordersApp.NewOrderService(ordersRepo, logger)
-
-	handler := routes.SetUpRouter(userAppService, orderService)
+	router := bootstrap.App(db)
 
 	myService := &http.Server{
 		Addr:    ":" + strconv.Itoa(cfg.App.Port),
-		Handler: handler,
+		Handler: router,
 	}
 	fmt.Printf("Server is running on port: http://localhost%s\n", myService.Addr)
 	if err := myService.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed %v", err)
 	}
-}
-
-func setupLogger(env string) *slog.Logger {
-	var log *slog.Logger
-
-	switch env {
-	case envLocal:
-		log = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envDev:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envProd:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
-	}
-
-	return log
 }
