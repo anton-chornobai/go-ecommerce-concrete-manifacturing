@@ -1,83 +1,91 @@
 package application
 
 import (
-	"fmt"
-
-	"github.com/anton-chornobai/beton.git/internal/lib/jwt"
-	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
+	"context"
 	"errors"
+	"fmt"
+	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
+	"github.com/anton-chornobai/beton.git/pkg/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
+type TokenManager interface {
+	GenerateToken(id, role string) (string, error)
+}
+
 type UserService struct {
-	repo   domain.Repository
+	repo domain.Repository
+	tokenManager TokenManager
 }
 
-type EmailLoginRequest struct {
-	Email    string
-	Password string
+func NewUserService(repo domain.Repository, tokenManager TokenManager) *UserService {
+	return &UserService{repo: repo, tokenManager: tokenManager}
 }
 
-func NewUserService(repo domain.Repository) *UserService {
-	return &UserService{repo: repo}
+func (s *UserService) SignupByEmail(ctx context.Context, email, password string) (string, error) {
+
+	err := utils.ValidatePasswordAndEmail(email, password)
+
+	if err != nil {
+		return "", err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("signup failed: %w", err)
+	}
+
+	user := domain.CreateUserWithEmail(email, string(hashedPassword))
+
+	if err := s.repo.SignupByEmail(ctx, user); err != nil {
+		return "", fmt.Errorf("signup failed: %w", err)
+	}
+
+	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	return token, nil
 }
 
 func (s *UserService) Signup(email, number string) (string, error) {
-
 	user, err := domain.CreateUser(number)
 	if err != nil {
 		return "", err
 	}
 
-	token, err := jwtmanager.GenerateToken(user.ID, user.Role)
+	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return "", err
 	}
 
-	if err := s.repo.Create(*user); err != nil {
+	if err := s.repo.Signup(user); err != nil {
 		return "", err
 	}
 
 	return token, nil
 }
 
-func (s *UserService) SignUpByEmail(req EmailLoginRequest) (*domain.UserCreatedWithEmail, error) {
-
-	// if err := jwtmanager.ValidateEmailAndPassword(req.Email, req.Password); err != nil {
-	// 	logger.Warn("Invalid email credentials", "err", err)
-	// 	return nil, fmt.Errorf("signup failed: %w", err)
-	// }
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+func (s *UserService) LoginByEmail(ctx context.Context, email, password string) (string, error) {
+	err := utils.ValidatePasswordAndEmail(email, password)
 	if err != nil {
-		return nil, fmt.Errorf("signup failed: %w", err)
+		return "", err
 	}
 
-	user := domain.CreateUserWithEmail(req.Email, string(hashedPassword))
+	user, err := s.repo.LoginByEmail(ctx, email, password)
 
-	if err := s.repo.SignUpByEmail(user); err != nil {
-		return nil, fmt.Errorf("signup failed: %w", err)
-	}
-
-	return user, nil
-}
-
-func (s *UserService) LoginByEmail(req EmailLoginRequest) (string, error) {
-
-	if req.Email == "" || req.Password == "" {
-		return "", errors.New("login failed: email and password required")
-	}
-
-	user, err := s.repo.GetByEmail(req.Email)
 	if err != nil {
-		return "", fmt.Errorf("login failed: %w", err)
+		return "", err
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(password)); err != nil {
 		return "", errors.New("login failed: invalid credentials")
 	}
 
-	token, err := jwtmanager.GenerateToken(user.ID, user.Role)
+	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
+
 	if err != nil {
 		return "", fmt.Errorf("login failed: %w", err)
 	}
@@ -85,11 +93,11 @@ func (s *UserService) LoginByEmail(req EmailLoginRequest) (string, error) {
 	return token, nil
 }
 
-func (s *UserService) GetByPhone(number string) (domain.User, error) {
+func (s *UserService) GetByPhone(number string) (*domain.User, error) {
 	user, err := s.repo.GetByPhone(number)
 	if err != nil {
 
-		return domain.User{}, err
+		return nil, err
 	}
 	return user, nil
 }

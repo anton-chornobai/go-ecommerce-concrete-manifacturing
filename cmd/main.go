@@ -2,40 +2,44 @@ package main
 
 import (
 	"fmt"
-
 	"log"
 	"net/http"
+
 	"strconv"
 
 	"github.com/anton-chornobai/beton.git/internal/boostrap"
 	"github.com/anton-chornobai/beton.git/internal/config"
 	"github.com/anton-chornobai/beton.git/internal/db"
+	"github.com/anton-chornobai/beton.git/internal/mail"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load("../../.env")
+	err := godotenv.Load(".env")
 
 	if err != nil {
 		log.Fatal(err)
-
 	}
-	cfg, err := config.LoadConfig("../../configs/app.yaml")
+
+	config, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// logger := config.SetupLogger(cfg.App.Env)
 
-	log.Println("SQLite DB path:", cfg.App.DBPath)
-	db := db.Connect(cfg.App.DBPath)
-
+	connStr := db.GetDBConnStr(config.DB)
+	db, err := db.OpenPostgre(connStr)
+	if err != nil {
+		log.Fatalf("failed to open db %v", err)
+	}
 	defer db.Close()
-
+	
+	mail.SendEmailSample()
 	router := bootstrap.App(db)
 
 	myService := &http.Server{
-		Addr:    ":" + strconv.Itoa(cfg.App.Port),
+		Addr:    ":" + strconv.Itoa(config.Port),
 		Handler: router,
 	}
 	fmt.Printf("Server is running on port: http://localhost%s\n", myService.Addr)
@@ -43,3 +47,4 @@ func main() {
 		log.Fatalf("Server failed %v", err)
 	}
 }
+

@@ -6,26 +6,18 @@ import (
 	"github.com/google/uuid"
 )
 
+const phoneNumberLength = 9
+
 type User struct {
-	ID        string
-	Number    string 
-	Role      string 
-	CreatedAt string 
-	Email     *string 
-	Password  string
-	Address   string
-	Name      string 
-	Surname   string 
-}
-
-type AuthenticationUserRequest struct {
-	Number string `json:"number"`
-}
-
-type AuthenticationUserCreated struct {
-	Number string `json:"number"`
-	Role   string `json:"role"`
-	ID     string `json:"id"`
+	ID string
+	Role      string
+	CreatedAt string
+	Address string
+	Name    string
+	Surname string
+	Number  *string
+	Email    *string
+	Password *string
 }
 
 type Claims struct {
@@ -35,43 +27,23 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-type RegisterResult struct {
-	User  UserCreated
-	Token string
-}
-
-const phoneNumberLength = 9
-
-type UserCreated struct {
-	ID     string
-	Role   string
-	Number string
-}
-
-type UserCreatedWithEmail struct {
-	ID     string
-	Role   string
-	Email string
-	Password string
-}
-
-func CreateUser(number string) (*UserCreated, error) {
+func CreateUser(number string) (*User, error) {
 	if number == "" || len(number) < phoneNumberLength {
 		return nil, errors.New("invalid phone number")
 	}
 
-	return &UserCreated{
+	return &User{
 		ID:     uuid.NewString(),
-		Role:   "user",
-		Number: number,
+		Role:   "customer",
+		Number: &number,
 	}, nil
 }
 
-func CreateUserWithEmail(email, password string) (*UserCreatedWithEmail) {
-	return &UserCreatedWithEmail{
-		ID:     uuid.NewString(),
-		Role:   "user",
-		Email: email,
-		Password: password,
+func CreateUserWithEmail(email, password string) *User {
+	return &User{
+		ID:       uuid.NewString(),
+		Role:     "customer",
+		Email:    &email,
+		Password: &password,
 	}
 }

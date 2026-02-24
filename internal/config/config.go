@@ -1,23 +1,34 @@
 package config
 
 import (
-	yaml "gopkg.in/yaml.v2"
+	"errors"
 	"os"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
-type AppConfig struct {
-	Env    string `yaml:"env"`
-	Secret string `yaml:"secret"`
-	DBPath string `yaml:"db_path"`
-	Port   int    `yaml:"port"`
-}
-
 type Config struct {
-	App AppConfig `yaml:"app"`
+	Env    string   `yaml:"env"`
+	DB     DBConfig `yaml:"database"`
+	Port   int      `yaml:"port"`
 }
 
-func LoadConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+type DBConfig struct {
+	Name     string `yaml:"name"`
+	Host     string `yaml:"host"`
+	User     string `yaml:"user"`
+	SSLmode  string `yaml:"sslmode"`
+	Password int    `yaml:"password"`
+	Port     int    `yaml:"port"`
+}
+
+func LoadConfig() (*Config, error) {
+	cfg_path := os.Getenv("CONFIG_PATH")
+	if cfg_path == "" {
+		return nil, errors.New("no cfg file found")
+	}
+
+	data, err := os.ReadFile(cfg_path)
 	if err != nil {
 		return nil, err
 	}

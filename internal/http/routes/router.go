@@ -25,7 +25,10 @@ func SetUpRoutes(userService *userService.UserService, orderService *application
 
 
 	router := http.NewServeMux()
-	router.HandleFunc("POST /auth/signup", authHandler.SignUpByEmail)
+	router.HandleFunc("POST /auth/signup", authHandler.SignupByEmail)
+	router.HandleFunc("POST /auth/login", authHandler.LoginByEmail)
+	// router.HandleFunc("GET /admin/products", middleware.AdminOnly())
+	// router.HandleFunc("POST /admin/products", )
 
 	return  router;
 }

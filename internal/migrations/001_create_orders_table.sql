@@ -1,33 +1,32 @@
 -- +goose Up
- 
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    number TEXT UNIQUE,
+    role TEXT NOT NULL,
+    email TEXT UNIQUE,
+    password TEXT,
+    address TEXT,
+    name TEXT NOT NULL DEFAULT '',
+    surname TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL,
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     total INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'pending',
     order_name TEXT NOT NULL DEFAULT '',
     discount INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE TABLE users (
-    id TEXT PRIMARY KEY,
-    number TEXT NOT NULL UNIQUE,
-    role TEXT NOT NULL,
-    email TEXT DEFAULT '',
-    password TEXT 
-    address TEXT NOT NULL DEFAULT '',
-    name TEXT NOT NULL DEFAULT '',
-    surname TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE order_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id INTEGER NOT NULL,
-    product_id INTEGER NOT NULL,
+    id UUID PRIMARY KEY,
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL,
     title TEXT NOT NULL,
     unit_price INTEGER NOT NULL,
     type TEXT,
@@ -36,8 +35,8 @@ CREATE TABLE order_items (
     height INTEGER,
     width INTEGER,
     material TEXT,
-    thickness INTEGER,
-    FOREIGN KEY (order_id) REFERENCES orders(id)
+    thickness INTEGER
 );
 
 -- +goose Down
+

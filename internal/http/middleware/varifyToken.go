@@ -11,7 +11,7 @@ func VerifyToken(next http.Handler) http.Handler {
 		cookie, err := r.Cookie("jwt")
 
 		if err != nil {
-			http.Error(w, "unauthenticated", http.StatusUnauthorized)
+			http.Error(w, "unautherized", http.StatusUnauthorized)
 			return
 		}
 
@@ -25,5 +25,30 @@ func VerifyToken(next http.Handler) http.Handler {
 		ctx := jwtmanager.AddClaimsToContext(r.Context(), claims)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func AdminOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("jwt")
+
+		if err != nil {
+			http.Error(w, "unautherized", http.StatusUnauthorized)
+			return
+		}
+
+		claims, err := jwtmanager.ValidateToken(cookie.Value)
+
+		if err != nil {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+		role, ok := claims["role"].(string)
+		if !ok || role != "ADMIN" {
+			http.Error(w, "forbidden: admin only", http.StatusForbidden)
+			return
+		}
+		
+		next.ServeHTTP(w, r)
 	})
 }

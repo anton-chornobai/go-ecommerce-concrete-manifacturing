@@ -10,9 +10,13 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateToken(id, role string) (string, error) {
+type TokenService struct {}
 
+func NewTokenService() *TokenService {
+	return  &TokenService{}
+}
 
+func (ts *TokenService) GenerateToken(id, role string) (string, error) {
 	myToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":   id,
 		"role": role,

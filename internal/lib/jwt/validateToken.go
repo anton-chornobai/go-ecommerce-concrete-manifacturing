@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func ValidateToken(stringToken string) (map[string]interface{}, error) {
+func ValidateToken(stringToken string) (map[string]any, error) {
 	secret := os.Getenv("SECRET")
 	if secret == "" {
 		return nil, errors.New("SECRET env variable missing")
