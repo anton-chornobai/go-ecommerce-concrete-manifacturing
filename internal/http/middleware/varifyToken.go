@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	jwtmanager "github.com/anton-chornobai/beton.git/internal/lib/jwt"
+	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 )
 
 func VerifyToken(next http.Handler) http.Handler {

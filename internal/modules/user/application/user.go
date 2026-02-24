@@ -4,22 +4,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	"github.com/anton-chornobai/beton.git/pkg/utils"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type TokenManager interface {
 	GenerateToken(id, role string) (string, error)
 }
 
+type PasswordHasher interface {
+	HashPassword(string) ([]byte, error)
+	CompareHashAndPassword(string, string) error
+}
+
 type UserService struct {
 	repo domain.Repository
 	tokenManager TokenManager
+	passwordHasher PasswordHasher
 }
 
-func NewUserService(repo domain.Repository, tokenManager TokenManager) *UserService {
-	return &UserService{repo: repo, tokenManager: tokenManager}
+func NewUserService(repo domain.Repository, tokenManager TokenManager, passwordHasher PasswordHasher) *UserService {
+	return &UserService{
+		repo: repo, 
+		tokenManager: tokenManager,
+		passwordHasher: passwordHasher,
+	}
 }
 
 func (s *UserService) SignupByEmail(ctx context.Context, email, password string) (string, error) {
@@ -30,7 +40,7 @@ func (s *UserService) SignupByEmail(ctx context.Context, email, password string)
 		return "", err
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := s.passwordHasher.HashPassword(password)
 	if err != nil {
 		return "", fmt.Errorf("signup failed: %w", err)
 	}
@@ -80,7 +90,7 @@ func (s *UserService) LoginByEmail(ctx context.Context, email, password string) 
 		return "", err
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(password)); err != nil {
+	if err := s.passwordHasher.CompareHashAndPassword(*user.Password, password); err != nil {
 		return "", errors.New("login failed: invalid credentials")
 	}
 
