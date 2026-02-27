@@ -12,6 +12,21 @@ CREATE TABLE users (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    price INTEGER NOT NULL DEFAULT 0,
+    title VARCHAR(50) NOT NULL UNIQUE,
+    product_type TEXT NOT NULL,
+    image_url TEXT,
+    color TEXT,
+    description TEXT,
+    stock_quantity INTEGER,
+    weight_grams INTEGER,
+    rating SMALLINT,
+    size_width INTEGER,
+    size_height INTEGER
+);
+
 CREATE TABLE orders (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

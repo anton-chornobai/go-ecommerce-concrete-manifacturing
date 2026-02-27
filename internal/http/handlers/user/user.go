@@ -1,9 +1,11 @@
-package handlers
+package user
 
 import (
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 )
@@ -28,7 +30,7 @@ func (s *UserHandler) GetByPhone() http.HandlerFunc {
 			http.Error(w, "invalid argument", http.StatusInternalServerError)
 			return
 		}
-
+		slog.New(slog.NewJSONHandler(os.Stdout, nil)).Warn("New user", "email:", user.Email)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 

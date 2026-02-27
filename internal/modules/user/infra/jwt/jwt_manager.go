@@ -17,20 +17,29 @@ func NewTokenService() *TokenService {
 }
 
 func (ts *TokenService) GenerateToken(id, role string) (string, error) {
-	myToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":   id,
-		"role": role,
-		"exp":  time.Now().Add(time.Hour * 24).Unix(),
-	})
-
 	secret := os.Getenv("SECRET")
 	if secret == "" {
-		return "", errors.New("thers no secret key found")
+		return "", errors.New("no secret key found")
 	}
-	tokenString, err := myToken.SignedString([]byte(secret))
+
+	claims := jwt.RegisteredClaims{
+		Subject:   id,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": claims.Subject,
+		"role": role,
+		"exp":  claims.ExpiresAt.Unix(),
+		"iat":  claims.IssuedAt.Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
-		return "", errors.New("couldnt generate a token ")
+		return "", err
 	}
+
 	return tokenString, nil
 }
 
@@ -61,7 +70,7 @@ func ValidateToken(stringToken string) (map[string]any, error) {
 	}
 
 	if !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, errors.New("invalid token1")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)

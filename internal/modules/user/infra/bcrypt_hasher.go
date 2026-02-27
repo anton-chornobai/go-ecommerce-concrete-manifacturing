@@ -8,14 +8,14 @@ import (
 
 type PasswordHasher struct {}
 
-func (h *PasswordHasher) HashPassword(password string) ([]byte, error){
+func (h *PasswordHasher) HashPassword(password string) (string, error){
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	if err != nil {		
-		return nil, errors.New("123")
+		return "", errors.New("123")
 	}
 
-	return hashedPassword, nil
+	return string(hashedPassword), nil
 }
 
 func (h *PasswordHasher) CompareHashAndPassword(hashedPassword, password  string) error {

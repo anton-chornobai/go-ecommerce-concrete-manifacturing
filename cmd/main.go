@@ -10,7 +10,6 @@ import (
 	"github.com/anton-chornobai/beton.git/internal/boostrap"
 	"github.com/anton-chornobai/beton.git/internal/config"
 	"github.com/anton-chornobai/beton.git/internal/db"
-	"github.com/anton-chornobai/beton.git/internal/mail"
 	"github.com/joho/godotenv"
 )
 
@@ -35,7 +34,6 @@ func main() {
 	}
 	defer db.Close()
 	
-	mail.SendEmailSample()
 	router := bootstrap.App(db)
 
 	myService := &http.Server{

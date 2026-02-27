@@ -1,4 +1,4 @@
-package auth_handler
+package user
 
 import (
 	"context"
@@ -55,7 +55,7 @@ func (s *AuthHandler) SignupByEmail(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   false, // set to true on production!!!
 		SameSite: http.SameSiteLaxMode,
-		Path:     "/auth/signup",
+		Path:     "/",
 	})
 
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -92,7 +92,7 @@ func (s *AuthHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   false, // set to true on production!!!
 		SameSite: http.SameSiteLaxMode,
-		Path:     "/auth/login",
+		Path:     "/",
 	})
 
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

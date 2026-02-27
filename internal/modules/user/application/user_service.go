@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	"github.com/anton-chornobai/beton.git/pkg/utils"
@@ -14,7 +15,7 @@ type TokenManager interface {
 }
 
 type PasswordHasher interface {
-	HashPassword(string) ([]byte, error)
+	HashPassword(string) (string, error)
 	CompareHashAndPassword(string, string) error
 }
 
@@ -22,13 +23,15 @@ type UserService struct {
 	repo domain.Repository
 	tokenManager TokenManager
 	passwordHasher PasswordHasher
+	log 	*slog.Logger
 }
 
-func NewUserService(repo domain.Repository, tokenManager TokenManager, passwordHasher PasswordHasher) *UserService {
+func NewUserService(repo domain.Repository, tokenManager TokenManager, passwordHasher PasswordHasher, log *slog.Logger) *UserService {
 	return &UserService{
 		repo: repo, 
 		tokenManager: tokenManager,
 		passwordHasher: passwordHasher,
+		log: log,
 	}
 }
 
@@ -45,17 +48,17 @@ func (s *UserService) SignupByEmail(ctx context.Context, email, password string)
 		return "", fmt.Errorf("signup failed: %w", err)
 	}
 
-	user := domain.CreateUserWithEmail(email, string(hashedPassword))
+	user := domain.CreateUserWithEmail(email, hashedPassword)
 
 	if err := s.repo.SignupByEmail(ctx, user); err != nil {
 		return "", fmt.Errorf("signup failed: %w", err)
 	}
 
 	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
-
 	if err != nil {
 		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
+	s.log.Info("New user is being created", "email", user.Email)
 
 	return token, nil
 }

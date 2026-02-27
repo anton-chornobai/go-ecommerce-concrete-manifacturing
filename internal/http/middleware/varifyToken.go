@@ -33,18 +33,18 @@ func AdminOnly(next http.Handler) http.Handler {
 		cookie, err := r.Cookie("jwt")
 
 		if err != nil {
-			http.Error(w, "unautherized", http.StatusUnauthorized)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
 		claims, err := jwtmanager.ValidateToken(cookie.Value)
 
 		if err != nil {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 		role, ok := claims["role"].(string)
-		if !ok || role != "ADMIN" {
+		if !ok || role != "admin" {
 			http.Error(w, "forbidden: admin only", http.StatusForbidden)
 			return
 		}
