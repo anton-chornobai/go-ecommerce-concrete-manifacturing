@@ -16,7 +16,7 @@ func NewTokenService() *TokenService {
 	return  &TokenService{}
 }
 
-func (ts *TokenService) GenerateToken(id, role string) (string, error) {
+func (ts *TokenService) GenerateToken(id, email, role string) (string, error) {
 	secret := os.Getenv("SECRET")
 	if secret == "" {
 		return "", errors.New("no secret key found")
@@ -31,6 +31,7 @@ func (ts *TokenService) GenerateToken(id, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": claims.Subject,
 		"role": role,
+		"email": email,
 		"exp":  claims.ExpiresAt.Unix(),
 		"iat":  claims.IssuedAt.Unix(),
 	})

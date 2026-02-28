@@ -34,8 +34,9 @@ func SetUpRoutes(
 	// }
 
 	router := http.NewServeMux()
-	router.HandleFunc("POST /auth/signup", authHandler.SignupByEmail)
-	router.HandleFunc("POST /auth/login", authHandler.LoginByEmail)
+	router.HandleFunc("POST /signup", authHandler.SignupByEmail)
+	router.HandleFunc("POST /login", authHandler.LoginByEmail)
+	router.HandleFunc("POST /verify", authHandler.Verify)
 	router.Handle(
 		"POST /admin/products",
 		middleware.AdminOnly(http.HandlerFunc(productHandler.Add)),

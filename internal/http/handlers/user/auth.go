@@ -3,8 +3,11 @@ package user
 import (
 	"context"
 	"encoding/json"
+
 	"net/http"
 	"time"
+
+	// "github.com/anton-chornobai/beton.git/internal/mail"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 )
 
@@ -36,16 +39,37 @@ func (s *AuthHandler) SignupByEmail(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var req SignupEmailRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	token, err := s.UserService.SignupByEmail(ctx, req.Email, req.Password)
-
+	err := s.UserService.SignupByEmail(ctx, req.Email, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "signup successful, please check your email to verify",
+	})
+}
+
+func (s *AuthHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+	defer cancel()
+
+	var req LoginEmailRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload credentials", http.StatusBadRequest)
+	}
+
+	token, err := s.UserService.LoginByEmail(ctx, req.Email, req.Password)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -69,40 +93,38 @@ func (s *AuthHandler) SignupByEmail(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *AuthHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second * 5)
-	defer cancel();
+func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
 
-	var req LoginEmailRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid payload credentials", http.StatusBadRequest)
+	var req struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
 	}
 
-	token, err := s.UserService.LoginByEmail(ctx, req.Email, req.Password)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
+	token, err := h.UserService.VerifyUser(ctx, req.Email, req.Code)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return 
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "jwt",
 		Value:    token,
 		HttpOnly: true,
-		Secure:   false, // set to true on production!!!
+		Secure:   false, // set true in production
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
 
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	w.WriteHeader(http.StatusOK)
-
-
-	if err := json.NewEncoder(w).Encode(map[string]any{
-		"token": token,
-	}); err != nil {
-		http.Error(w, "failed to encode response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-} 
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "email verified successfully",
+		"token":   token,
+	})
+}

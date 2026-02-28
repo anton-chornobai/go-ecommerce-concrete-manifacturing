@@ -33,6 +33,7 @@ func main() {
 		log.Fatalf("failed to open db %v", err)
 	}
 	defer db.Close()
+
 	
 	router := bootstrap.App(db)
 

@@ -1,15 +1,19 @@
 -- +goose Up
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     number TEXT UNIQUE,
     role TEXT NOT NULL,
     email TEXT UNIQUE,
     password TEXT,
-    address TEXT,
+    address TEXT NOT NULL DEFAULT '',
     name TEXT NOT NULL DEFAULT '',
     surname TEXT NOT NULL DEFAULT '',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    verified BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_hash TEXT NOT NULL DEFAULT '', 
+    verification_expires_at TIMESTAMP
 );
 
 CREATE TABLE products (

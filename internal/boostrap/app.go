@@ -25,10 +25,12 @@ import (
 
 func App(db *sql.DB) http.Handler{
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	
 	passwordHasher := &infra.PasswordHasher{}
+	verificationCodeManager := &infra.VerificationaCodeManager{}
 	tokenManager := jwtmanager.NewTokenService()
 	userRepo := &infra.UserRepository{DB: db}
-	userService := application.NewUserService(userRepo, tokenManager, passwordHasher, log)
+	userService := application.NewUserService(userRepo, tokenManager, passwordHasher, log, verificationCodeManager)
 
 	productRepo := &productRepo.ProductRepository{DB: db}
 	productService, err := productService.NewProductService(productRepo)

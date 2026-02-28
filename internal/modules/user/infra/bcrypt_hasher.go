@@ -1,6 +1,8 @@
 package infra
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 
 	"golang.org/x/crypto/bcrypt"
@@ -26,4 +28,9 @@ func (h *PasswordHasher) CompareHashAndPassword(hashedPassword, password  string
 	}
 
 	return nil
+}
+
+func (h *PasswordHasher) HashVerificationCode(code string) string {
+	hash := sha256.Sum256([]byte(code))
+	return hex.EncodeToString(hash[:])
 }
