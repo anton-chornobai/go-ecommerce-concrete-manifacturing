@@ -5,7 +5,8 @@ import (
 
 	// "github.com/anton-chornobai/beton.git/internal/http/handlers"
 	"github.com/anton-chornobai/beton.git/internal/http/handlers"
-	auth_handler "github.com/anton-chornobai/beton.git/internal/http/handlers/user"
+	user_handler "github.com/anton-chornobai/beton.git/internal/http/handlers/user"
+
 	"github.com/anton-chornobai/beton.git/internal/http/middleware"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	productService "github.com/anton-chornobai/beton.git/internal/modules/product/application"
@@ -17,7 +18,7 @@ func SetUpRoutes(
 	orderService *application.OrderService,
 	productService productService.ProductService,
 ) http.Handler {
-	authHandler := auth_handler.AuthHandler{
+	authHandler := user_handler.AuthHandler{
 		UserService: userService,
 	}
 
@@ -25,9 +26,9 @@ func SetUpRoutes(
 		ProductService: productService,
 	}
 
-	// userHandler := handlers.UserHandler{
-	// 	UserService: userService,
-	// }
+	userHandler := user_handler.UserHandler{
+		UserService: userService,
+	}
 
 	// orderHandler := handlers.OrdersHandler {
 	// 	OrdersService: orderService,
@@ -37,6 +38,8 @@ func SetUpRoutes(
 	router.HandleFunc("POST /signup", authHandler.SignupByEmail)
 	router.HandleFunc("POST /login", authHandler.LoginByEmail)
 	router.HandleFunc("POST /verify", authHandler.Verify)
+	router.HandleFunc("GET /profile", userHandler.GetByID)
+
 	router.Handle(
 		"POST /admin/products",
 		middleware.AdminOnly(http.HandlerFunc(productHandler.Add)),

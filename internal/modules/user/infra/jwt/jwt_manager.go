@@ -40,7 +40,6 @@ func (ts *TokenService) GenerateToken(id, email, role string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return tokenString, nil
 }
 

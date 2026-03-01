@@ -51,11 +51,16 @@ func (r *UserRepository) SignupByEmail(ctx context.Context, user *domain.User, v
 func (r *UserRepository) LoginByEmail(ctx context.Context, email, password string) (*domain.User, error) {
 	var user domain.User
 
-	row := r.DB.QueryRowContext(ctx, `SELECT password, role, name FROM users WHERE email=$1`, email)
+	row := r.DB.QueryRowContext(ctx, `SELECT id, email, password, role, name, verified, verification_hash, verification_expires_at FROM users WHERE email=$1`, email)
 	err := row.Scan(
+		&user.ID,
+		&user.Email,
 		&user.Password,
 		&user.Role,
 		&user.Name,
+		&user.IsVerified,
+		&user.VerificationHash,
+		&user.VerificationExpiresAt,
 	)
 
 	if err != nil {
@@ -169,4 +174,30 @@ func (r *UserRepository) MarkUserVerified(ctx context.Context, email string) err
 	}
 
 	return nil
+}
+
+func (r *UserRepository) GetByID(id string) (*domain.User, error) {
+	var user domain.User
+	row := r.DB.QueryRow(
+		"SELECT id, number, name, surname, role, email, created_at, address, verified, verification_hash, verification_expires_at FROM users WHERE id=$1", id)
+
+	err := row.Scan(
+		&user.ID,
+		&user.Number,
+		&user.Name,
+		&user.Surname,
+		&user.Role,
+		&user.Email,
+		&user.CreatedAt,
+		&user.Address,
+		&user.IsVerified,
+		&user.VerificationHash,
+		&user.VerificationExpiresAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }

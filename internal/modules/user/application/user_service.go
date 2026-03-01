@@ -9,6 +9,7 @@ import (
 
 	"github.com/anton-chornobai/beton.git/internal/mail"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
+	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 	"github.com/anton-chornobai/beton.git/pkg/utils"
 )
 
@@ -162,6 +163,26 @@ func (s *UserService) LoginByEmail(ctx context.Context, email, password string) 
 
 func (s *UserService) GetByPhone(number string) (*domain.User, error) {
 	user, err := s.repo.GetByPhone(number)
+	if err != nil {
+
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *UserService) GetByID(token string) (*domain.User, error) {
+
+	claims, err := jwtmanager.ValidateToken(token)
+	if err != nil {
+		return nil, fmt.Errorf("couldnt parse claims: %w", err)
+	}	
+
+	id, ok := claims["sub"].(string)
+    if !ok || id == "" {
+        return nil, fmt.Errorf("sub claim missing or invalid")
+    }
+
+	user, err := s.repo.GetByID(id)
 	if err != nil {
 
 		return nil, err
