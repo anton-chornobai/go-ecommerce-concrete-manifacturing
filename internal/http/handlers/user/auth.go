@@ -3,12 +3,14 @@ package user
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"net/http"
 	"time"
 
 	// "github.com/anton-chornobai/beton.git/internal/mail"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
+	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
 )
 
 type AuthHandler struct {
@@ -38,24 +40,42 @@ func (s *AuthHandler) SignupByEmail(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	// Decode request body
 	var req SignupEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request payload", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "invalid request payload",
+		})
 		return
 	}
 
 	err := s.UserService.SignupByEmail(ctx, req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+
+		if errors.Is(err, infra.ErrUserAlreadyExists) {
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "This user already exists!",
+			})
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "signup failed: " + err.Error(),
+		})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "signup successful, please check your email to verify",
 	})
 }
-
 func (s *AuthHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 	defer cancel()
@@ -69,6 +89,14 @@ func (s *AuthHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	token, err := s.UserService.LoginByEmail(ctx, req.Email, req.Password)
 
 	if err != nil {
+		if errors.Is(err, application.ErrAccountNotVerified) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden) // 403
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "account not verified",
+			})
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

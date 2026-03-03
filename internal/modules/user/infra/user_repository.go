@@ -3,11 +3,15 @@ package infra
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 )
+
+var ErrUserAlreadyExists = errors.New("user already exists")
+
 
 type UserRepository struct {
 	DB *sql.DB
@@ -28,27 +32,45 @@ func (r *UserRepository) Signup(user *domain.User) error {
 	return err
 }
 
-func (r *UserRepository) SignupByEmail(ctx context.Context, user *domain.User, verificationHash string, expiresAt *time.Time) error {
-	_, err := r.DB.ExecContext(
+
+func (r *UserRepository) SignupByEmail(
+	ctx context.Context,
+	user *domain.User,
+	verificationHash string,
+	expiresAt *time.Time,
+) error {
+
+	query := `
+	INSERT INTO users (id, role, email, password, verification_hash, verification_expires_at)
+	VALUES ($1, $2, $3, $4, $5, $6)
+	ON CONFLICT (email) DO NOTHING
+	RETURNING id;
+	`
+
+	var insertedID string
+
+	err := r.DB.QueryRowContext(
 		ctx,
-		`INSERT INTO users (id, role, email, password, verification_hash, verification_expires_at) 
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		query,
 		user.ID,
 		user.Role,
 		user.Email,
 		user.Password,
 		verificationHash,
 		expiresAt,
-	)
+	).Scan(&insertedID)
 
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			return ErrUserAlreadyExists
+		}
+		return fmt.Errorf("insert user: %w", err)
 	}
 
 	return nil
 }
 
-func (r *UserRepository) LoginByEmail(ctx context.Context, email, password string) (*domain.User, error) {
+func (r *UserRepository) LoginByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var user domain.User
 
 	row := r.DB.QueryRowContext(ctx, `SELECT id, email, password, role, name, verified, verification_hash, verification_expires_at FROM users WHERE email=$1`, email)

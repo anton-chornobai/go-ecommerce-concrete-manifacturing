@@ -13,8 +13,9 @@ import (
 	"github.com/anton-chornobai/beton.git/pkg/utils"
 )
 
+
 type TokenManager interface {
-	GenerateToken(id, email, role string) (string, error)
+	GenerateToken(id string) (string, error)
 }
 
 type VerificationaCodeManager interface {
@@ -110,7 +111,7 @@ func (s *UserService) VerifyUser(ctx context.Context, email, submittedCode strin
 		return "", fmt.Errorf("failed to verify user: %w", err)
 	}
 
-	token, err := s.tokenManager.GenerateToken(user.ID, user.Email, user.Role)
+	token, err := s.tokenManager.GenerateToken(user.ID)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate JWT: %w", err)
 	}
@@ -124,7 +125,7 @@ func (s *UserService) Signup(email, number string) (string, error) {
 		return "", err
 	}
 
-	token, err := s.tokenManager.GenerateToken(user.ID, user.Email, user.Role)
+	token, err := s.tokenManager.GenerateToken(user.ID)
 	if err != nil {
 		return "", err
 	}
@@ -142,7 +143,7 @@ func (s *UserService) LoginByEmail(ctx context.Context, email, password string) 
 		return "", err
 	}
 
-	user, err := s.repo.LoginByEmail(ctx, email, password)
+	user, err := s.repo.LoginByEmail(ctx, email)
 
 	if err != nil {
 		return "", err
@@ -152,7 +153,11 @@ func (s *UserService) LoginByEmail(ctx context.Context, email, password string) 
 		return "", errors.New("login failed: invalid credentials")
 	}
 
-	token, err := s.tokenManager.GenerateToken(user.ID, user.Email, user.Role)
+	if !user.IsVerified {
+		return "", ErrAccountNotVerified
+	}
+
+	token, err := s.tokenManager.GenerateToken(user.ID)
 
 	if err != nil {
 		return "", fmt.Errorf("login failed: %w", err)
@@ -175,12 +180,12 @@ func (s *UserService) GetByID(token string) (*domain.User, error) {
 	claims, err := jwtmanager.ValidateToken(token)
 	if err != nil {
 		return nil, fmt.Errorf("couldnt parse claims: %w", err)
-	}	
+	}
 
 	id, ok := claims["sub"].(string)
-    if !ok || id == "" {
-        return nil, fmt.Errorf("sub claim missing or invalid")
-    }
+	if !ok || id == "" {
+		return nil, fmt.Errorf("sub claim missing or invalid")
+	}
 
 	user, err := s.repo.GetByID(id)
 	if err != nil {
