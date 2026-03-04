@@ -30,16 +30,16 @@ func SetUpRoutes(
 		UserService: userService,
 	}
 
-	// orderHandler := handlers.OrdersHandler {
-	// 	OrdersService: orderService,
-	// }
+	orderHandler := handlers.OrdersHandler {
+		OrdersService: orderService,
+	}
 
 	router := http.NewServeMux()
 	router.HandleFunc("POST /signup", authHandler.SignupByEmail)
 	router.HandleFunc("POST /login", authHandler.LoginByEmail)
 	router.HandleFunc("POST /verify", authHandler.Verify)
 	router.HandleFunc("GET /profile", userHandler.GetByID)
-
+	router.HandleFunc("POST  /orders", orderHandler.Create)
 	router.Handle(
 		"POST /admin/products",
 		middleware.AdminOnly(http.HandlerFunc(productHandler.Add)),

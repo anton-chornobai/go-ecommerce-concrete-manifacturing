@@ -39,7 +39,7 @@ func App(db *sql.DB) http.Handler{
 	}
 
 	ordersRepo := &ordersRepo.OrdersRepository{DB: db}
-	orderService := ordersApp.NewOrderService(ordersRepo)
+	orderService := ordersApp.NewOrderService(ordersRepo, log)
 
 	router := routes.SetUpRoutes(userService, orderService, *productService)
 

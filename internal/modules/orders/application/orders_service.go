@@ -1,23 +1,20 @@
 package application
 
 import (
+	"context"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
+	"log/slog"
 )
 
 type OrderService struct {
 	Repo domain.OrderRepository
+	Log  *slog.Logger
 }
 
-type CreateOrderRequest struct {
-	UserID   string             `json:"user_id"`
-	Name     string             `json:"name"`
-	Items    []domain.OrderItem `json:"items"`
-	Discount int                `json:"discount"`
-}
-
-func NewOrderService(repo domain.OrderRepository) *OrderService {
+func NewOrderService(repo domain.OrderRepository, log *slog.Logger) *OrderService {
 	return &OrderService{
 		Repo: repo,
+		Log:  log,
 	}
 }
 
@@ -25,18 +22,17 @@ func (o *OrderService) Orders(limit int) {
 
 }
 
-func (o *OrderService) Create(req CreateOrderRequest) (*domain.Order, error) {
-	order, err := domain.NewOrder(req.UserID, req.Items, req.Discount)
+func (o *OrderService) Create(ctx context.Context, req *domain.Order) error {
+	order, err := domain.NewOrder(req.UserID, req.OrderName, req.Items, req.Discount, req.ShippingAddress, req.ShippingCity, req.ShippingPostalCode)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	err = o.Repo.Save(order)
+	err = o.Repo.Create(ctx, order)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return order, nil
+	return nil
 }

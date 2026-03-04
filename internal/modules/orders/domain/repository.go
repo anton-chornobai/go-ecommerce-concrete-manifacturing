@@ -1,7 +1,10 @@
 package domain
 
+import "context"
+
 type OrderRepository interface {
-	Save(*Order) error
-	Orders(limit int) ([]Order, error)
-	// OrderWithUserInfo(userId string) (Order, error)
+	Create(ctx context.Context, order *Order) error
+	// Delete(ctx context.Context, id int) error
+	// Edit(ctx context.Context, id int) error
+	// Orders(ctx context.Context, limit int) ([]Order, error)
 }

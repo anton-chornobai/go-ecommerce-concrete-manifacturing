@@ -34,13 +34,13 @@ CREATE TABLE products (
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    order_name TEXT NOT NULL DEFAULT '',
     total INTEGER NOT NULL DEFAULT 0 CHECK (total >= 0),
     status TEXT NOT NULL DEFAULT 'pending' 
         CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
     payment_status TEXT NOT NULL DEFAULT 'unpaid'
         CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')),
     discount INTEGER NOT NULL DEFAULT 0 CHECK (discount >= 0),
-    order_name TEXT NOT NULL DEFAULT '',
     shipping_address TEXT NOT NULL,
     shipping_city TEXT NOT NULL,
     shipping_postal_code TEXT NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE orders (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE order_items (
+CREATE TABLE order_item (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     product_id INT NOT NULL REFERENCES products(id),
