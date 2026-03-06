@@ -64,3 +64,8 @@ CREATE TABLE order_item (
 );
 
 -- +goose Down
+
+DROP TABLE IF EXISTS order_item;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS users;

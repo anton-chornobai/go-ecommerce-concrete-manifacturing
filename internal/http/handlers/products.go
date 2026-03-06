@@ -23,7 +23,7 @@ type ProductRequest struct {
 	ImageURL      string  `json:"imageUrl"`
 	Color         string  `json:"color"`
 	Description   *string `json:"description,omitempty"`
-	StockQuantity *int    `json:"stockQuantity,omitempty"`
+	StockQuantity *int    `json:"stock_quantity,omitempty"`
 	Weight        *int    `json:"weight,omitempty"`
 	Rating        *int    `json:"rating,omitempty"`
 	Size          *struct {
@@ -67,7 +67,7 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 		Size:          size,
 	}
 
-	productID, err := h.ProductService.Add(ctx, product)
+	err := h.ProductService.Add(ctx, product)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -76,7 +76,37 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{
-		"created_id": productID,
 		"title": product.Title,
 	})
+}
+
+func (h *ProductHandler) DeleteByID(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var req struct {
+		Id int `json:"id"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	err = h.ProductService.DeleteByID(ctx, req.Id);
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json");
+	err = json.NewEncoder(w).Encode(map[string]string{
+		 "message": "Product deleted",
+	})
+	if err != nil {
+		http.Error(w, "couldnt write response about deletion", http.StatusInternalServerError)
+
+	}
 }

@@ -25,8 +25,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// logger := config.SetupLogger(cfg.App.Env)
-
 	connStr := db.GetDBConnStr(config.DB)
 	db, err := db.OpenPostgre(connStr)
 	if err != nil {

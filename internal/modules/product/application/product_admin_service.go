@@ -2,19 +2,21 @@ package application
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 )
 
 type ProductService struct {
 	repo domain.Repository
+	log  *slog.Logger
 }
 
 func NewProductService(repo domain.Repository) (*ProductService, error) {
 	return &ProductService{repo: repo}, nil
 }
 
-func (p *ProductService) Add(ctx context.Context, input domain.Product) (int, error) {
+func (p *ProductService) Add(ctx context.Context, input domain.Product) error {
 	product, err := domain.NewProduct(
 		input.Price,
 		input.Title,
@@ -29,21 +31,26 @@ func (p *ProductService) Add(ctx context.Context, input domain.Product) (int, er
 	)
 
 	if err != nil {
-		return -1, err
+		return err
 	}
 
-	createdID, err := p.repo.Add(ctx, product)
+	err = p.repo.Add(ctx, product)
 
 	if err != nil {
-		return -1, err
+		return err
 	}
 
-	return createdID, nil
+	return nil
 }
 
-func (p *ProductService) Remove(ctx context.Context) error {
-	return nil
+func (p *ProductService) DeleteByID(ctx context.Context, id int) error {
+	err := p.repo.RemoveByID(ctx, id)
 
+	if err != nil {
+		return err;
+	}
+
+	return nil
 }
 
 func (p *ProductService) Edit(ctx context.Context) error {

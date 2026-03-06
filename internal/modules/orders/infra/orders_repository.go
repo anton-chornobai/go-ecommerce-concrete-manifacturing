@@ -4,31 +4,60 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
-	// "errors"
-	// "github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
 )
 
 type OrdersRepository struct {
 	DB *sql.DB
 }
+func (o *OrdersRepository) Get(ctx context.Context, limit int) ([]domain.Order, error) {
 
-func (o *OrdersRepository) Orders(ctx context.Context, limit int) ([]domain.Order, error) {
 	rows, err := o.DB.QueryContext(ctx, `
-		SELECT id, user_id, order_name, total, status, payment_status, discount, shipping_address, shipping_city, shipping_postal_code, created_at, updated_at FROM orders LIMIT=$1
+	SELECT 
+	    o.id,
+	    o.user_id,
+	    o.order_name,
+	    o.total,
+	    o.status,
+	    o.payment_status,
+	    o.discount,
+	    o.shipping_address,
+	    o.shipping_city,
+	    o.shipping_postal_code,
+	    o.created_at,
+	    o.updated_at,
+
+	    oi.id,
+	    oi.title,
+	    oi.type,
+	    oi.color,
+	    oi.material,
+	    oi.order_id,
+	    oi.product_id,
+	    oi.quantity,
+	    oi.unit_price,
+	    oi.height,
+	    oi.width,
+	    oi.thickness
+
+	FROM orders o
+	LEFT JOIN order_item oi 
+	ON o.id = oi.order_id
+	ORDER BY o.id
+	LIMIT $1
 	`, limit)
 
 	if err != nil {
 		return nil, err
 	}
 
-	defer rows.Close()
-
-	var orders []domain.Order
+	orderMap := make(map[int]*domain.Order)
 
 	for rows.Next() {
+
 		var order domain.Order
+		var item domain.OrderItem
+		var size domain.Size
 
 		err := rows.Scan(
 			&order.ID,
@@ -43,21 +72,49 @@ func (o *OrdersRepository) Orders(ctx context.Context, limit int) ([]domain.Orde
 			&order.ShippingPostalCode,
 			&order.CreatedAt,
 			&order.UpdatedAt,
+
+			&item.ID,
+			&item.Title,
+			&item.Type,
+			&item.Color,
+			&item.Material,
+			&item.OrderID,
+			&item.ProductID,
+			&item.Quantity,
+			&item.UnitPrice,
+			&size.Height,
+			&size.Width,
+			&size.Thickness,
 		)
 
 		if err != nil {
 			return nil, err
 		}
 
-		orders = append(orders, order)
+		item.Size = size
+
+		existingOrder, ok := orderMap[order.ID]
+
+		if !ok {
+			order.Items = []domain.OrderItem{}
+			orderMap[order.ID] = &order
+			existingOrder = &order
+		}
+
+		if item.ID.String() != "" {
+			existingOrder.Items = append(existingOrder.Items, item)
+		}
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
+	var orders []domain.Order
+
+	for _, o := range orderMap {
+		orders = append(orders, *o)
 	}
 
 	return orders, nil
 }
+
 func (o *OrdersRepository) Create(ctx context.Context, order *domain.Order) error {
 	tx, err := o.DB.BeginTx(ctx, nil)
 	if err != nil {

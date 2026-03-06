@@ -18,8 +18,14 @@ func NewOrderService(repo domain.OrderRepository, log *slog.Logger) *OrderServic
 	}
 }
 
-func (o *OrderService) Orders(limit int) {
+func (o *OrderService) Get(ctx context.Context, limit int) ([]domain.Order, error) {
+	orders, err := o.Repo.Get(ctx, limit);
 
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 func (o *OrderService) Create(ctx context.Context, req *domain.Order) error {

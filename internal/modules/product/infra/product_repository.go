@@ -12,21 +12,18 @@ type ProductRepository struct {
 	DB *sql.DB
 }
 
-func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) (int, error) {
+func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) error {
 	var id int
 
 	var sizeWidth *int
 	var sizeHeight *int
-
-	// Size could be nil so accessing the fields that doesnt exist would panic,
-	// therefore we check
 
 	if product.Size != nil {
 		sizeWidth = &product.Size.Width
 		sizeHeight = &product.Size.Height
 	}
 	err := p.DB.QueryRowContext(ctx, `
-		INSERT INTO product (
+		INSERT INTO products (
 			price,
 			title,
 			product_type,
@@ -56,13 +53,27 @@ func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) (i
 	).Scan(&id)
 
 	if err != nil {
-		return -1, fmt.Errorf("couldnt add new product: %w", err)
+		return fmt.Errorf("couldnt add new product: %w", err)
 	}
 
-	return id, nil
+	return nil
 }
 
-func (p *ProductRepository) Remove(ctx context.Context) error {
+func (p *ProductRepository) RemoveByID(ctx context.Context, id int) error {
+	res, err := p.DB.ExecContext(ctx, `DELETE FROM products WHERE id=$1`, id)
+	if err != nil {
+		return fmt.Errorf("couldnt exec deletion: %w", err)
+	}
+
+	affectedRow, err := res.RowsAffected()
+
+	if err != nil {
+		return fmt.Errorf("couldnt check if rows were affected: %w", err)
+	}
+
+	if affectedRow == 0 {
+		return fmt.Errorf("row not found")
+	}
 
 	return nil
 }

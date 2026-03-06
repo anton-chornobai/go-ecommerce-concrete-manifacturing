@@ -18,14 +18,9 @@ import (
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 )
 
-// import (
-// 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
-// 	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
-// )
-
-func App(db *sql.DB) http.Handler{
+func App(db *sql.DB) http.Handler {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	
+
 	passwordHasher := &infra.PasswordHasher{}
 	verificationCodeManager := &infra.VerificationaCodeManager{}
 	tokenManager := jwtmanager.NewTokenService()
@@ -35,7 +30,8 @@ func App(db *sql.DB) http.Handler{
 	productRepo := &productRepo.ProductRepository{DB: db}
 	productService, err := productService.NewProductService(productRepo)
 	if err != nil {
-		
+		log.Error("failed to create product service", "error", err)
+		panic(err)
 	}
 
 	ordersRepo := &ordersRepo.OrdersRepository{DB: db}

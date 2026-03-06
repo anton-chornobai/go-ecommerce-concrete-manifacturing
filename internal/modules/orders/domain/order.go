@@ -12,18 +12,18 @@ type OrderStatus string
 type PaymentStatus string
 
 const (
-	OrderPending   OrderStatus = "pending"
-	OrderConfirmed OrderStatus = "confirmed"
-	OrderShipped   OrderStatus = "shipped"
-	OrderDelivered OrderStatus = "delivered"
-	OrderCancelled OrderStatus = "cancelled"
+	OrderPending   OrderStatus = "очікується"
+	OrderConfirmed OrderStatus = "підтверджено"
+	OrderShipped   OrderStatus = "відправлено"
+	OrderDelivered OrderStatus = "доставлено"
+	OrderCancelled OrderStatus = "скасовано"
 )
 
 const (
-	PaymentUnpaid   PaymentStatus = "unpaid"
-	PaymentPaid     PaymentStatus = "paid"
-	PaymentFailed   PaymentStatus = "failed"
-	PaymentRefunded PaymentStatus = "refunded"
+	PaymentUnpaid   PaymentStatus = "неоплачено"
+	PaymentPaid     PaymentStatus = "оплачено"
+	PaymentFailed   PaymentStatus = "не вдалося"
+	PaymentRefunded PaymentStatus = "повернено"
 )
 
 type Order struct {
@@ -91,8 +91,6 @@ func NewOrder(
 	if shippingPostalCode == nil || *shippingPostalCode == "" {
 		return nil, errors.New("shipping postal code is required")
 	}
-
-	// Validate discount if provided
 	if discount != nil {
 		if *discount < 0 || *discount > 100 {
 			return nil, errors.New("discount must be between 0 and 100")
