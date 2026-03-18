@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 )
 
@@ -28,12 +29,12 @@ func VerifyToken(next http.Handler) http.Handler {
 	})
 }
 
-func AdminOnly(next http.Handler) http.Handler {
+func AdminOnly(userService *application.UserService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("jwt")
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, "cookie" + err.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -43,12 +44,24 @@ func AdminOnly(next http.Handler) http.Handler {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		role, ok := claims["role"].(string)
-		if !ok || role != "admin" {
-			http.Error(w, "forbidden: admin only", http.StatusForbidden)
+		id, ok := claims["sub"].(string)
+		if !ok {
+			http.Error(w, "could not get id", http.StatusForbidden)
 			return
 		}
-		
+
+		isAdmin, err := userService.IsAdmin(id)
+
+		if err != nil {
+			http.Error(w, "something went wrong", http.StatusInternalServerError)
+			return
+		}
+
+		if !isAdmin {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

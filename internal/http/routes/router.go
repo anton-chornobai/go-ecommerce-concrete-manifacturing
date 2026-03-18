@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log/slog"
 	"net/http"
 
 	// "github.com/anton-chornobai/beton.git/internal/http/handlers"
@@ -14,6 +15,7 @@ import (
 )
 
 func SetUpRoutes(
+	logger *slog.Logger,
 	userService *userService.UserService,
 	orderService *application.OrderService,
 	productService productService.ProductService,
@@ -42,10 +44,15 @@ func SetUpRoutes(
 	//PROFILE
 	router.HandleFunc("GET /profile", userHandler.GetByID)
 	//ORDERS
-	router.HandleFunc("POST /orders", orderHandler.Create)
-	router.HandleFunc("GET /orders", orderHandler.Get)
-	router.Handle("POST /products", http.HandlerFunc(productHandler.Add))
-	router.Handle("DELETE /products", http.HandlerFunc(productHandler.DeleteByID))
+	router.HandleFunc("POST /v1/orders", orderHandler.Create)
+	router.HandleFunc("GET /v1/orders", orderHandler.Get)
+	//PRODUCTS
+	router.Handle("GET /v1/products",  http.HandlerFunc(productHandler.GetProducts))
+	router.Handle("POST /v1/products", middleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
 
-	return middleware.CorsMiddleware(router)
+	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
+	router.Handle("DELETE /v1/products/{id}", http.HandlerFunc(productHandler.DeleteByID))
+	router.Handle("PATCH /v1/products/{id}", http.HandlerFunc(productHandler.Update))
+
+	return middleware.LogMethodInfo(logger, middleware.CorsMiddleware(router))
 }

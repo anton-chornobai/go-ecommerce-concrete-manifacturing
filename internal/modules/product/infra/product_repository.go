@@ -3,7 +3,10 @@ package infra
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+
+	"strings"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 )
@@ -59,6 +62,182 @@ func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) er
 	return nil
 }
 
+func (p *ProductRepository) GetWithLimit(ctx context.Context, limit int) ([]domain.Product, error) {
+	var products []domain.Product
+	query := `SELECT 
+		id,
+		price,
+		title,
+		product_type,
+		image_url,
+		color,
+		description,
+		status,
+		stock_quantity,
+		weight_grams,
+		rating,
+		size_width,
+		size_height
+	FROM products LIMIT $1
+	`
+
+	rows, err := p.DB.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute query: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var product domain.Product
+		var width, height sql.NullInt64
+
+		err = rows.Scan(
+			&product.ID,
+			&product.Price,
+			&product.Title,
+			&product.Type,
+			&product.ImageURL,
+			&product.Color,
+			&product.Description,
+			&product.Status,
+			&product.StockQuantity,
+			&product.Weight,
+			&product.Rating,
+			&width,
+			&height,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("fail scanning product from DB: %w", err)
+		}
+		if width.Valid && height.Valid {
+			product.Size = &domain.Size{
+				Width:  int(width.Int64),
+				Height: int(height.Int64),
+			}
+		}
+
+		products = append(products, product)
+	}
+
+	return products, nil
+}
+
+func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Product, error) {
+	var product domain.Product
+	var width, height sql.NullInt64
+
+	query := `SELECT 
+		id,
+		price,
+		title,
+		product_type,
+		image_url,
+		color,
+		description,
+		status,
+		stock_quantity,
+		weight_grams,
+		rating,
+		size_width,
+		size_height
+	FROM products WHERE id=$1;
+	`
+
+	row := p.DB.QueryRowContext(ctx, query, id)
+
+	err := row.Scan(
+		&product.ID,
+		&product.Price,
+		&product.Title,
+		&product.Type,
+		&product.ImageURL,
+		&product.Color,
+		&product.Description,
+		&product.Status,
+		&product.StockQuantity,
+		&product.Weight,
+		&product.Rating,
+		&width,
+		&height,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("not found row")
+		}
+		return nil, fmt.Errorf("GetByID: scanning error: %w", err)
+	}
+
+	if width.Valid && height.Valid {
+		product.Size = &domain.Size{
+			Width:  int(width.Int64),
+			Height: int(height.Int64),
+		}
+	} else {
+		product.Size = nil
+	}
+
+	return &product, nil
+}
+
+func (r *ProductRepository) Update(ctx context.Context, id int, req domain.ProductUpdate) error {
+	var sb strings.Builder
+	args := []any{}
+	i := 1
+
+	sb.WriteString("UPDATE products SET ")
+
+	fields := []struct {
+		column string
+		value  any
+	}{
+		{"price", req.Price},
+		{"title", req.Title},
+		{"product_type", req.ProductType},
+		{"image_url", req.ImageURL},
+		{"color", req.Color},
+		{"description", req.Description},
+		{"stock_quantity", req.StockQuantity},
+		{"weight_grams", req.WeightGrams},
+		{"rating", req.Rating},
+		{"size_width", req.SizeWidth},
+		{"size_height", req.SizeHeight},
+	}
+
+	for _, f := range fields {
+		if f.value != nil {
+			fmt.Fprintf(&sb, "%s=$%d,", f.column, i)
+			args = append(args, f.value)
+			i++
+		}
+	}
+
+	if len(args) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	query := strings.TrimSuffix(sb.String(), ",")
+	query += fmt.Sprintf(" WHERE id=$%d", i)
+	args = append(args, id)
+
+	res, err := r.DB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("product not found")
+	}
+
+	return nil
+}
+
 func (p *ProductRepository) RemoveByID(ctx context.Context, id int) error {
 	res, err := p.DB.ExecContext(ctx, `DELETE FROM products WHERE id=$1`, id)
 	if err != nil {
@@ -74,11 +253,6 @@ func (p *ProductRepository) RemoveByID(ctx context.Context, id int) error {
 	if affectedRow == 0 {
 		return fmt.Errorf("row not found")
 	}
-
-	return nil
-}
-
-func (p *ProductRepository) Edit(ctx context.Context) error {
 
 	return nil
 }

@@ -223,3 +223,18 @@ func (r *UserRepository) GetByID(id string) (*domain.User, error) {
 
 	return &user, nil
 }
+
+func (r *UserRepository) IsAdmin(id string) (bool, error) {
+	var isAdmin bool
+	err := r.DB.QueryRow(`SELECT role = 'admin' FROM users WHERE id=$1`, id).Scan(&isAdmin)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return  false, fmt.Errorf("user not found")
+		}
+
+		return false, fmt.Errorf("db error: %w", err)
+	}
+
+	return isAdmin, nil
+}

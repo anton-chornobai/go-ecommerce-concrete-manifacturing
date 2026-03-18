@@ -3,24 +3,27 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
+
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
 )
 
 type OrdersHandler struct {
+	log           *slog.Logger
 	OrdersService *application.OrderService
 }
 
 func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	
+
 	limitStr := r.URL.Query().Get("limit")
-	//default limit
-	limit := 10 
+	limit := 10
+
 	if limitStr != "" {
 		l, err := strconv.Atoi(limitStr)
 		if err != nil {
@@ -33,16 +36,30 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 	orders, err := o.OrdersService.Get(ctx, limit)
 	if err != nil {
 		http.Error(w, "Internal", http.StatusInternalServerError)
+		return
 	}
 
-	w.WriteHeader(http.StatusOK);
-	w.Header().Set("Content-Type", "application/json")  
-	if err := json.NewEncoder(w).Encode(map[string]any { 
-		"message": "Order successfuly created!",
-		"data": orders,
-	}); err != nil {
-		http.Error(w, "Failed to send data", http.StatusInternalServerError)
-	} 
+	if len(orders) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(map[string]any{
+			"message": "No orders found",
+			"data":    []any{},
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	err = json.NewEncoder(w).Encode(map[string]any{
+		"message": "Orders",
+		"data":    orders,
+	})
+	if err != nil {
+		o.log.Info("encode error:", err)
+	}
 }
 
 func (o *OrdersHandler) Create(w http.ResponseWriter, r *http.Request) {

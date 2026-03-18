@@ -2,31 +2,55 @@ package domain
 
 import "errors"
 
+type ProductStatus string
+
+const (
+	ProductArchived ProductStatus = "archived"
+	ProductPublic   ProductStatus = "public"
+)
+
 type Size struct {
 	Width  int `json:"width"`
 	Height int `json:"height"`
 }
 
 type Product struct {
-	ID            int     `json:"id"`
-	Price         int     `json:"price"`
-	Title         string  `json:"title"`
-	Type          string  `json:"type"`
-	ImageURL      string  `json:"imageUrl"`
-	Color         string  `json:"color"`
-	Description   *string `json:"description,omitempty"`
-	StockQuantity *int    `json:"stockQuantity,omitempty"`
-	Weight        *int    `json:"weight,omitempty"`
-	Rating        *int    `json:"rating,omitempty"`
-	Size          *Size   `json:"size,omitempty"`
+	ID            int           `json:"id"`
+	Price         int           `json:"price"`
+	Title         string        `json:"title"`
+	Type          string        `json:"type"`
+	Color         string        `json:"color"`
+	Status        ProductStatus `json:"status"`
+	ImageURL      *string       `json:"imageUrl"`
+	Description   *string       `json:"description,omitempty"`
+	StockQuantity *int          `json:"stockQuantity,omitempty"`
+	Weight        *int          `json:"weight,omitempty"`
+	Rating        *int          `json:"rating,omitempty"`
+	Size          *Size         `json:"size,omitempty"`
+}
+
+type ProductUpdate struct {
+	Price         *int
+	Title         *string
+	ProductType   *string
+	ImageURL      *string
+	Color         *string
+	Status        *ProductStatus
+	Description   *string
+	StockQuantity *int
+	WeightGrams   *int
+	Rating        *int
+	SizeWidth     *int
+	SizeHeight    *int
 }
 
 func NewProduct(
 	price int,
 	title string,
 	productType string,
-	imageURL string,
 	color string,
+	status ProductStatus,
+	imageURL *string,
 	stockQuantity *int,
 	description *string,
 	weight *int,
@@ -46,6 +70,10 @@ func NewProduct(
 		return nil, errors.New("product type is required")
 	}
 
+	if status != ProductArchived && status != ProductPublic {
+		return nil, errors.New("invalid product status")
+	}
+
 	if stockQuantity != nil && *stockQuantity < 0 {
 		return nil, errors.New("stock quantity cannot be negative")
 	}
@@ -59,6 +87,7 @@ func NewProduct(
 		Title:         title,
 		Type:          productType,
 		ImageURL:      imageURL,
+		Status:        status,
 		Color:         color,
 		StockQuantity: stockQuantity,
 		Description:   description,

@@ -14,4 +14,5 @@ type Repository interface {
 	GetByID(id string) (*User, error)
 	SaveVerificationCode(ctx context.Context, email, code string) error
 	MarkUserVerified(ctx context.Context, email string) error
+	IsAdmin(id string) (bool, error)
 }

@@ -2,7 +2,12 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 
 	"net/http"
 	"time"
@@ -15,26 +20,93 @@ type ProductHandler struct {
 	ProductService application.ProductService
 }
 
+func NewProductsHandler(productService application.ProductService) *ProductHandler {
+	return &ProductHandler{ProductService: productService}
+}
+
+
 type ProductRequest struct {
 	ID            int     `json:"id"`
 	Price         int     `json:"price"`
 	Title         string  `json:"title"`
-	Type          string  `json:"type"`
-	ImageURL      string  `json:"imageUrl"`
+	Type          string  `json:"product_type"`
 	Color         string  `json:"color"`
+	Status        *string `json:"status,omitempty"`
+	ImageURL      *string `json:"imageUrl"`
 	Description   *string `json:"description,omitempty"`
 	StockQuantity *int    `json:"stock_quantity,omitempty"`
 	Weight        *int    `json:"weight,omitempty"`
 	Rating        *int    `json:"rating,omitempty"`
-	Size          *struct {
-		Width  int `json:"width"`
-		Height int `json:"height"`
-	} `json:"size,omitempty"`
+	Width         *int    `json:"width,omitempty"`
+	Height        *int    `json:"height,omitempty"`
 }
 
-func NewProductsHandler(productService application.ProductService) *ProductHandler {
-	return &ProductHandler{ProductService: productService}
+
+func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	products, err := h.ProductService.GetWithLimit(ctx, 20)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return 
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string][]domain.Product{
+		"data": products,
+	}); err != nil {
+		http.Error(w, "couldnt send data", http.StatusInternalServerError)
+		return
+	}
 }
+
+func(h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second);
+	defer cancel();
+
+	pathParts := strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 3 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	idStr := pathParts[3]
+	fmt.Println(idStr)
+
+	ingtegerID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	product, err := h.ProductService.GetById(ctx, ingtegerID)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "no such product", http.StatusBadRequest)
+			return
+		}
+		fmt.Println(err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	if err := json.NewEncoder(w).Encode(map[string]any{
+		"data": product,
+	});  err != nil {
+		http.Error(w, "couldnt encode response", http.StatusInternalServerError)
+		return
+		
+	}
+}
+
+
 
 func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -47,11 +119,17 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var size *domain.Size
-	if req.Size != nil {
+	if req.Width != nil && req.Height != nil {
 		size = &domain.Size{
-			Width:  req.Size.Width,
-			Height: req.Size.Height,
+			Width:  *req.Width,
+			Height: *req.Height,
 		}
+	}
+
+	var productSatusSafe domain.ProductStatus
+
+	if req.Status != nil {
+		productSatusSafe = domain.ProductStatus(*req.Status)
 	}
 
 	product := domain.Product{
@@ -59,6 +137,7 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 		Title:         req.Title,
 		Type:          req.Type,
 		ImageURL:      req.ImageURL,
+		Status:        productSatusSafe,
 		Color:         req.Color,
 		Description:   req.Description,
 		StockQuantity: req.StockQuantity,
@@ -76,7 +155,7 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{
-		"title": product.Title,
+		"message": product.Title,
 	})
 }
 
@@ -94,19 +173,65 @@ func (h *ProductHandler) DeleteByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.ProductService.DeleteByID(ctx, req.Id);
+	err = h.ProductService.DeleteByID(ctx, req.Id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json");
+	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(map[string]string{
-		 "message": "Product deleted",
+		"message": "Product deleted",
 	})
 	if err != nil {
 		http.Error(w, "couldnt write response about deletion", http.StatusInternalServerError)
 
+	}
+}
+
+func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	var req application.ProductPatchRequest
+
+	path := r.URL.Path
+
+	parts := strings.Split(path, "/")
+	if len(parts) != 4 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+	idStr := parts[3]
+	id, err := strconv.Atoi(idStr)
+
+	if err != nil {
+		http.Error(w, "invalid product id", http.StatusBadRequest)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	fmt.Println(req)
+	err = h.ProductService.Update(ctx, id, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	err = json.NewEncoder(w).Encode(map[string]any{
+		"message": "Success",
+	})
+
+	if err != nil {
+		http.Error(w, "failed to send response message", http.StatusInternalServerError)
+		return
 	}
 }

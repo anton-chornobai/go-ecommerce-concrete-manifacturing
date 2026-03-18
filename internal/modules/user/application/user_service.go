@@ -194,3 +194,17 @@ func (s *UserService) GetByID(token string) (*domain.User, error) {
 	}
 	return user, nil
 }
+
+func (s *UserService) IsAdmin(id string) (bool, error) {
+	isAdmin, err := s.repo.IsAdmin(id);
+
+	if err != nil {
+		return false, fmt.Errorf("something went wrong: %w", err)
+	}
+
+	if !isAdmin {
+		return false, fmt.Errorf("unauthorized") 
+	}
+
+	return isAdmin, nil
+}

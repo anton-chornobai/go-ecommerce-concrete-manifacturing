@@ -24,6 +24,7 @@ CREATE TABLE products (
     image_url TEXT,
     color TEXT,
     description TEXT,
+    status TEXT NOT NULL DEFAULT 'archived' CHECK (status IN ('archived', 'displayed')), 
     stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
     weight_grams INTEGER CHECK (weight_grams >= 0),
     rating SMALLINT CHECK (rating >= 0 AND rating <= 5),
@@ -36,11 +37,13 @@ CREATE TABLE orders (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     order_name TEXT NOT NULL DEFAULT '',
     total INTEGER NOT NULL DEFAULT 0 CHECK (total >= 0),
+    deposit INTEGER NOT NULL DEFAULT 0 CHECK (deposit >= 0),
     status TEXT NOT NULL DEFAULT 'pending' 
         CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
     payment_status TEXT NOT NULL DEFAULT 'unpaid'
-        CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')),
+        CHECK (payment_status IN ('deposited','unpaid', 'paid', 'failed', 'refunded')),
     discount INTEGER NOT NULL DEFAULT 0 CHECK (discount >= 0),
+    description VARCHAR(500) NOT NULL DEFAULT '',
     shipping_address TEXT NOT NULL,
     shipping_city TEXT NOT NULL,
     shipping_postal_code TEXT NOT NULL,

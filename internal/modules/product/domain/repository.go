@@ -1,10 +1,14 @@
 package domain
 
-import "context"
+import (
+	"context"
+)
 
 type Repository interface {
-	Add(ctx context.Context, product *Product)  error
-	RemoveByID(ctx context.Context, id int) error 
-	// Edit(ctx context.Context, id int)
-	// Get()
+	GetWithLimit(ctx context.Context, limit int) ([]Product, error)
+	GetByID(ctx context.Context, id int) (*Product, error)
+	Add(ctx context.Context, product *Product) error
+	RemoveByID(ctx context.Context, id int) error
+	Update(ctx context.Context, id int, req ProductUpdate) error
+	
 }
