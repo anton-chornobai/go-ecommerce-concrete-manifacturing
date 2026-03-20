@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"strconv"
-
+	// "github.com/redis/go-redis/v9"
 	"github.com/anton-chornobai/beton.git/internal/boostrap"
 	"github.com/anton-chornobai/beton.git/internal/config"
 	"github.com/anton-chornobai/beton.git/internal/db"
@@ -31,6 +31,16 @@ func main() {
 		log.Fatalf("failed to open db %v", err)
 	}
 	defer db.Close()
+
+	// rdb := redis.NewClient(&redis.Options{
+	// 	Addr:     "localhost:6379",
+	// 	Password: "", // no password
+	// 	DB:       0,  // use default DB
+	// 	Protocol: 2,
+	// })
+
+	// ctx := context.Background()
+
 
 	
 	router := bootstrap.App(db)

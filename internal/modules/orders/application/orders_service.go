@@ -19,7 +19,7 @@ func NewOrderService(repo domain.OrderRepository, log *slog.Logger) *OrderServic
 }
 
 func (o *OrderService) Get(ctx context.Context, limit int) ([]domain.Order, error) {
-	orders, err := o.Repo.Get(ctx, limit);
+	orders, err := o.Repo.Get(ctx, limit)
 
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (o *OrderService) Get(ctx context.Context, limit int) ([]domain.Order, erro
 }
 
 func (o *OrderService) Create(ctx context.Context, req *domain.Order) error {
-	order, err := domain.NewOrder(req.UserID, req.OrderName, req.Items, req.Discount, req.ShippingAddress, req.ShippingCity, req.ShippingPostalCode)
+	order, err := domain.NewOrder(req.UserID, req.OrderName, req.CustomerName, req.Items, req.Discount, req.CustomerNumber, req.ShippingAddress, req.ShippingCity, req.ShippingPostalCode)
 
 	if err != nil {
 		return err

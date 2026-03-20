@@ -27,19 +27,21 @@ const (
 )
 
 type Order struct {
-	ID                 int             `json:"id"`
-	Total              int             `json:"total"`
-	UserID             string          `json:"user_id"`
-	OrderName          string          `json:"order_name"`
-	Items              []OrderItem     `json:"items"`
-	Status             OrderStatus     `json:"status"`
-	PaymentStatus      PaymentStatus   `json:"payment_status"`
-	Discount           *int            `json:"discount,omitempty"`
-	ShippingAddress    *string         `json:"shipping_address,omitempty"`
-	ShippingCity       *string         `json:"shipping_city,omitempty"`
-	ShippingPostalCode *string         `json:"shipping_postal_code,omitempty"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	ID                 int           `json:"id"`
+	Total              int           `json:"total"`
+	CustomerName       string        `json:"customer_name"`
+	UserID             string        `json:"user_id"`
+	OrderName          string        `json:"order_name"`
+	Items              []OrderItem   `json:"items"`
+	Status             OrderStatus   `json:"status"`
+	PaymentStatus      PaymentStatus `json:"payment_status"`
+	CustomerNumber     *string       `json:"customer_number,omitempty"`
+	Discount           *int          `json:"discount,omitempty"`
+	ShippingAddress    *string       `json:"shipping_address,omitempty"`
+	ShippingCity       *string       `json:"shipping_city,omitempty"`
+	ShippingPostalCode *string       `json:"shipping_postal_code,omitempty"`
+	CreatedAt          time.Time     `json:"created_at"`
+	UpdatedAt          time.Time     `json:"updated_at"`
 }
 
 type Size struct {
@@ -50,26 +52,31 @@ type Size struct {
 
 type OrderItem struct {
 	ID        uuid.UUID `json:"id"`
-	Title     string `json:"title"`
-	Type      string `json:"type"`
-	Color     string `json:"color"`
-	Material  string `json:"material"`
-	OrderID   int    `json:"order_id"`
-	ProductID int    `json:"product_id"`
-	Quantity  int    `json:"quantity"`
-	UnitPrice int    `json:"unit_price"`
-	Size      Size   `json:"size"`
+	Title     string    `json:"title"`
+	Type      string    `json:"type"`
+	Color     string    `json:"color"`
+	Material  string    `json:"material"`
+	OrderID   int       `json:"order_id"`
+	ProductID int       `json:"product_id"`
+	Quantity  int       `json:"quantity"`
+	UnitPrice int       `json:"unit_price"`
+	Size      Size      `json:"size"`
 }
+
 func NewOrder(
 	userID string,
 	orderName string,
+	customerName string,
 	items []OrderItem,
 	discount *int,
+	number *string,
 	shippingAddress *string,
 	shippingCity *string,
 	shippingPostalCode *string,
 ) (*Order, error) {
-
+	if customerName == "" {
+		return nil, errors.New("customer name required")
+	}
 	if userID == "" {
 		return nil, errors.New("userID is required")
 	}
@@ -80,6 +87,10 @@ func NewOrder(
 
 	if len(items) == 0 {
 		return nil, errors.New("order must contain at least one item")
+	}
+
+	if number == nil || *number == "" || len(*number) < 7 || len(*number) > 12 {
+		return nil, errors.New("invalid number")
 	}
 
 	if shippingAddress == nil || *shippingAddress == "" {
@@ -119,12 +130,14 @@ func NewOrder(
 
 	order := &Order{
 		UserID:             userID,
+		CustomerName:       customerName,
 		OrderName:          orderName,
 		Items:              items,
 		Total:              total,
 		Status:             OrderPending,
 		PaymentStatus:      PaymentUnpaid,
 		Discount:           discount,
+		CustomerNumber:     number,
 		ShippingAddress:    shippingAddress,
 		ShippingCity:       shippingCity,
 		ShippingPostalCode: shippingPostalCode,
@@ -134,5 +147,3 @@ func NewOrder(
 
 	return order, nil
 }
-
-	

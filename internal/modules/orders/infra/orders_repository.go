@@ -15,6 +15,8 @@ func (o *OrdersRepository) Get(ctx context.Context, limit int) ([]domain.Order, 
 	rows, err := o.DB.QueryContext(ctx, `
 	SELECT 
 	    o.id,
+		o.customer_name,
+		o.customer_number,
 	    o.user_id,
 	    o.order_name,
 	    o.total,
@@ -61,6 +63,8 @@ func (o *OrdersRepository) Get(ctx context.Context, limit int) ([]domain.Order, 
 
 		err := rows.Scan(
 			&order.ID,
+			&order.CustomerName,
+			&order.CustomerNumber,
 			&order.UserID,
 			&order.OrderName,
 			&order.Total,
@@ -125,6 +129,8 @@ func (o *OrdersRepository) Create(ctx context.Context, order *domain.Order) erro
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO orders (
 			user_id,
+			customer_name,
+			customer_number,
 			order_name,
 			total,
 			status,
@@ -136,10 +142,12 @@ func (o *OrdersRepository) Create(ctx context.Context, order *domain.Order) erro
 			created_at,
 			updated_at
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		RETURNING id
 	`,
 		order.UserID,
+		order.CustomerName,
+		order.CustomerNumber,
 		order.OrderName,
 		order.Total,
 		order.Status,
