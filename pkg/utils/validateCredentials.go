@@ -14,7 +14,6 @@ func ValidatePasswordAndEmail(email, password string) error {
 		return errors.New("password must be at least 8 characters")
 	}
 
-	// basic email format check
 	regex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	if !regex.MatchString(email) {
 		return errors.New("invalid email format")

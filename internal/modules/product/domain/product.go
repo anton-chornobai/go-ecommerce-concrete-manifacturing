@@ -21,7 +21,7 @@ type Product struct {
 	Type          string        `json:"type"`
 	Color         string        `json:"color"`
 	Status        ProductStatus `json:"status"`
-	ImageURL      *string       `json:"imageUrl"`
+	ImageURL      *string       `json:"image_url"`
 	Description   *string       `json:"description,omitempty"`
 	StockQuantity *int          `json:"stockQuantity,omitempty"`
 	Weight        *int          `json:"weight,omitempty"`

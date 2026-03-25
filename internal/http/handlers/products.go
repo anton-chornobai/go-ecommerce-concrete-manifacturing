@@ -24,15 +24,14 @@ func NewProductsHandler(productService application.ProductService) *ProductHandl
 	return &ProductHandler{ProductService: productService}
 }
 
-
 type ProductRequest struct {
 	ID            int     `json:"id"`
 	Price         int     `json:"price"`
 	Title         string  `json:"title"`
-	Type          string  `json:"product_type"`
+	Type          string  `json:"type"`
 	Color         string  `json:"color"`
 	Status        *string `json:"status,omitempty"`
-	ImageURL      *string `json:"imageUrl"`
+	ImageURL      *string `json:"image_url"`
 	Description   *string `json:"description,omitempty"`
 	StockQuantity *int    `json:"stock_quantity,omitempty"`
 	Weight        *int    `json:"weight,omitempty"`
@@ -40,7 +39,6 @@ type ProductRequest struct {
 	Width         *int    `json:"width,omitempty"`
 	Height        *int    `json:"height,omitempty"`
 }
-
 
 func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -50,7 +48,7 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return 
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -63,9 +61,9 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func(h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second);
-	defer cancel();
+func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
 
 	pathParts := strings.Split(r.URL.Path, "/")
 	if len(pathParts) < 3 {
@@ -99,14 +97,12 @@ func(h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(map[string]any{
 		"data": product,
-	});  err != nil {
+	}); err != nil {
 		http.Error(w, "couldnt encode response", http.StatusInternalServerError)
 		return
-		
+
 	}
 }
-
-
 
 func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -163,30 +159,33 @@ func (h *ProductHandler) DeleteByID(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	var req struct {
-		Id int `json:"id"`
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 4 {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
 
-	err = h.ProductService.DeleteByID(ctx, req.Id)
+	idStr := parts[len(parts)-1]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid product ID", http.StatusBadRequest)
+		return
+	}
+
+	err = h.ProductService.DeleteByID(ctx, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(map[string]string{
 		"message": "Product deleted",
 	})
 	if err != nil {
-		http.Error(w, "couldnt write response about deletion", http.StatusInternalServerError)
-
+		http.Error(w, "couldn't write response about deletion", http.StatusInternalServerError)
+		return
 	}
 }
 
