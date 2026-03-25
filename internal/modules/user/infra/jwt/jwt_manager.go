@@ -78,3 +78,17 @@ func ValidateToken(stringToken string) (map[string]any, error) {
 
 	return map[string]interface{}(claims), nil
 }
+
+func GetUsersID(tokenString string) (string, error) {
+	claims, err := ValidateToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+
+	sub, ok := claims["sub"].(string)
+	if !ok || sub == "" {
+		return "", errors.New("subject claim not found in token")
+	}
+
+	return sub, nil
+}
