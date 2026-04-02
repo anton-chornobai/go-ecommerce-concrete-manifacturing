@@ -20,7 +20,7 @@ CREATE TABLE products (
     id SERIAL PRIMARY KEY,
     price INTEGER NOT NULL DEFAULT 0 CHECK (price >= 0),
     title VARCHAR(50) NOT NULL UNIQUE,
-    product_type TEXT NOT NULL,
+    type TEXT NOT NULL,
     image_url TEXT,
     color TEXT,
     description TEXT,
@@ -55,7 +55,7 @@ CREATE TABLE orders (
 CREATE TABLE order_item (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    product_id INT NOT NULL REFERENCES products(id),
+    product_id INT REFERENCES products(id),
     title TEXT NOT NULL,
     unit_price INTEGER NOT NULL CHECK (unit_price >= 0),
     type TEXT,

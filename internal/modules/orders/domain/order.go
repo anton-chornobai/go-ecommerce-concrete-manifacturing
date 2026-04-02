@@ -77,9 +77,7 @@ func NewOrder(
 	if customerName == "" {
 		return nil, errors.New("customer name required")
 	}
-	if userID == "" {
-		return nil, errors.New("userID is required")
-	}
+	
 
 	if orderName == "" {
 		return nil, errors.New("order name is required")

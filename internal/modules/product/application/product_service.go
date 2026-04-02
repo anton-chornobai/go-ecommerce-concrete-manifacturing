@@ -2,7 +2,11 @@ package application
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 )
@@ -15,16 +19,16 @@ type ProductService struct {
 type ProductPatchRequest struct {
 	Price         *int                  `json:"price,omitempty"`
 	Title         *string               `json:"title,omitempty"`
-	ProductType   *string               `json:"productType,omitempty"`
-	ImageURL      *string               `json:"imageUrl,omitempty"`
+	ProductType   *string               `json:"type,omitempty"`
+	ImageURL      *string               `json:"image_url,omitempty"`
 	Color         *string               `json:"color,omitempty"`
 	Status        *domain.ProductStatus `json:"status,omitempty"`
 	Description   *string               `json:"description,omitempty"`
-	StockQuantity *int                  `json:"stockQuantity,omitempty"`
-	WeightGrams   *int                  `json:"weightGrams,omitempty"`
+	StockQuantity *int                  `json:"stock_quantity,omitempty"`
+	WeightGrams   *int                  `json:"weight,omitempty"`
 	Rating        *int                  `json:"rating,omitempty"`
-	SizeWidth     *int                  `json:"sizeWidth,omitempty"`
-	SizeHeight    *int                  `json:"sizeHeight,omitempty"`
+	SizeWidth     *int                  `json:"size_width,omitempty"`
+	SizeHeight    *int                  `json:"size_height,omitempty"`
 }
 
 func NewProductService(repo domain.Repository) (*ProductService, error) {
@@ -80,10 +84,23 @@ func (p *ProductService) Add(ctx context.Context, input domain.Product) error {
 }
 
 func (p *ProductService) DeleteByID(ctx context.Context, id int) error {
-	err := p.repo.RemoveByID(ctx, id)
+	product, err := p.repo.GetByID(ctx, id)
+
+	if err != nil {
+		return fmt.Errorf("failed to get product form db %w", err)
+	}
+
+	err = p.repo.DeleteByID(ctx, id)
 
 	if err != nil {
 		return err
+	}
+
+	if product.ImageURL != nil {
+		filePath := strings.TrimPrefix(*product.ImageURL, "/")
+		if err := os.Remove(filePath); err != nil && errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("could not delete image: %w", err)
+		}
 	}
 
 	return nil

@@ -197,6 +197,7 @@ func (r *ProductRepository) Update(ctx context.Context, id int, req domain.Produ
 		{"type", req.ProductType},
 		{"image_url", req.ImageURL},
 		{"color", req.Color},
+		{"status", req.Status},
 		{"description", req.Description},
 		{"stock_quantity", req.StockQuantity},
 		{"weight_grams", req.WeightGrams},
@@ -238,20 +239,42 @@ func (r *ProductRepository) Update(ctx context.Context, id int, req domain.Produ
 	return nil
 }
 
-func (p *ProductRepository) RemoveByID(ctx context.Context, id int) error {
-	res, err := p.DB.ExecContext(ctx, `DELETE FROM products WHERE id=$1`, id)
+func (p *ProductRepository) DeleteByID(ctx context.Context, id int) error {
+	tx, err := p.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("couldnt exec deletion: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	affectedRow, err := res.RowsAffected()
+	defer tx.Rollback()
 
+	_, err = tx.ExecContext(ctx,
+		`UPDATE order_item SET product_id = NULL WHERE product_id = $1`,
+		id,
+	)
 	if err != nil {
-		return fmt.Errorf("couldnt check if rows were affected: %w", err)
+		return fmt.Errorf("failed to nullify product references: %w", err)
 	}
 
-	if affectedRow == 0 {
-		return fmt.Errorf("row not found")
+	res, err := tx.ExecContext(ctx,
+		`DELETE FROM products WHERE id = $1`,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete product: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("could not check affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("product not found")
+	}
+
+	// 3. commit (CRITICAL)
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

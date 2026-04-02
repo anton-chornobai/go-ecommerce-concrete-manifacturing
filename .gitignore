@@ -1,3 +1,4 @@
 .env
+/uploads
 /configs/app.yaml
 git rm --cached configs/app.yaml

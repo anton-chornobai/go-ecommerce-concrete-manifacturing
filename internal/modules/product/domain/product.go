@@ -6,7 +6,7 @@ type ProductStatus string
 
 const (
 	ProductArchived ProductStatus = "archived"
-	ProductPublic   ProductStatus = "public"
+	ProductPublic   ProductStatus = "displayed"
 )
 
 type Size struct {
@@ -19,7 +19,7 @@ type Product struct {
 	Price         int           `json:"price"`
 	Title         string        `json:"title"`
 	Type          string        `json:"type"`
-	Color         string        `json:"color"`
+	Color         *string        `json:"color"`
 	Status        ProductStatus `json:"status"`
 	ImageURL      *string       `json:"image_url"`
 	Description   *string       `json:"description,omitempty"`
@@ -48,7 +48,7 @@ func NewProduct(
 	price int,
 	title string,
 	productType string,
-	color string,
+	color *string,
 	status ProductStatus,
 	imageURL *string,
 	stockQuantity *int,
