@@ -271,8 +271,7 @@ func (p *ProductRepository) DeleteByID(ctx context.Context, id int) error {
 	if rows == 0 {
 		return fmt.Errorf("product not found")
 	}
-
-	// 3. commit (CRITICAL)
+	
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}

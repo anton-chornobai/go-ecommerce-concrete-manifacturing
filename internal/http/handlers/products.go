@@ -121,43 +121,53 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var imageURL *string
+
 	file, header, err := r.FormFile("image_url")
 	if err != nil {
-		http.Error(w, "image is required", http.StatusBadRequest)
-		return
+		if err != http.ErrMissingFile {
+			http.Error(w, "failed to read image: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		//  no file provided, then imageURL stays nil
+	} else {
+		defer file.Close()
+	
+		contentType := header.Header.Get("Content-Type")
+		allowed := map[string]bool{
+			"image/jpeg": true,
+			"image/png":  true,
+			"image/webp": true,
+		}
+		if !allowed[contentType] {
+			http.Error(w, "only jpeg/png/webp allowed", http.StatusBadRequest)
+			return
+		}
+	
+		ext := filepath.Ext(header.Filename)
+		filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+		savePath := filepath.Join("uploads", filename)
+	
+		if err := os.MkdirAll("uploads", 0755); err != nil {
+			http.Error(w, "could not create uploads dir", http.StatusInternalServerError)
+			return
+		}
+	
+		dst, err := os.Create(savePath)
+		if err != nil {
+			http.Error(w, "could not save file", http.StatusInternalServerError)
+			return
+		}
+		defer dst.Close()
+	
+		if _, err := io.Copy(dst, file); err != nil {
+			http.Error(w, "could not write file", http.StatusInternalServerError)
+			return
+		}
+	
+		url := "/uploads/" + filename
+		imageURL = &url
 	}
-	defer file.Close()
-
-	contentType := header.Header.Get("Content-Type")
-	fmt.Println(contentType)
-	allowed := map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true}
-	if !allowed[contentType] {
-		http.Error(w, "only jpeg/png/webp allowed", http.StatusBadRequest)
-		return
-	}
-
-	ext := filepath.Ext(header.Filename)
-	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
-	savePath := filepath.Join("uploads", filename)
-
-	if err := os.MkdirAll("uploads", 0755); err != nil {
-		http.Error(w, "could not create uploads dir", http.StatusInternalServerError)
-		return
-	}
-
-	dst, err := os.Create(savePath)
-	if err != nil {
-		http.Error(w, "could not save file", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "could not write file", http.StatusInternalServerError)
-		return
-	}
-
-	imageURL := "/uploads/" + filename
 
 	price, err := strconv.Atoi(r.FormValue("price"))
 	if err != nil {
@@ -245,7 +255,7 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 		Title:         title,
 		Type:          productType,
 		Color:         color,
-		ImageURL:      &imageURL,
+		ImageURL:      imageURL,
 		Status:        productStatusSafe,
 		Description:   description,
 		StockQuantity: stockQuantity,
