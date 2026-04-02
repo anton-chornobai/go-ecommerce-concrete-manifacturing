@@ -45,9 +45,9 @@ CREATE TABLE orders (
         CHECK (payment_status IN ('deposited','unpaid', 'paid', 'failed', 'refunded')),
     discount INTEGER NOT NULL DEFAULT 0 CHECK (discount >= 0),
     description VARCHAR(500) NOT NULL DEFAULT '',
-    shipping_address TEXT NOT NULL,
-    shipping_city TEXT NOT NULL,
-    shipping_postal_code TEXT NOT NULL,
+    shipping_address TEXT,
+    shipping_city TEXT,
+    shipping_postal_code TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

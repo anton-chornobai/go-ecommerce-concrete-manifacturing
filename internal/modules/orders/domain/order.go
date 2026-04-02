@@ -77,7 +77,6 @@ func NewOrder(
 	if customerName == "" {
 		return nil, errors.New("customer name required")
 	}
-	
 
 	if orderName == "" {
 		return nil, errors.New("order name is required")
@@ -87,18 +86,13 @@ func NewOrder(
 		return nil, errors.New("order must contain at least one item")
 	}
 
-	if number == nil || *number == "" || len(*number) < 7 || len(*number) > 12 {
-		return nil, errors.New("invalid number")
+	if number != nil && *number == "" {
+		number = nil
 	}
-
-	if shippingAddress == nil || *shippingAddress == "" {
-		return nil, errors.New("shipping address is required")
-	}
-	if shippingCity == nil || *shippingCity == "" {
-		return nil, errors.New("shipping city is required")
-	}
-	if shippingPostalCode == nil || *shippingPostalCode == "" {
-		return nil, errors.New("shipping postal code is required")
+	if number != nil {
+		if len(*number) < 7 || len(*number) > 12 {
+			return nil, errors.New("invalid number")
+		}
 	}
 	if discount != nil {
 		if *discount < 0 || *discount > 100 {
