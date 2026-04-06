@@ -37,6 +37,7 @@ CREATE TABLE orders (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     customer_name TEXT NOT NULL DEFAULT '',
     customer_number TEXT,
+    order_name TEXT,
     total INTEGER NOT NULL DEFAULT 0 CHECK (total >= 0),
     deposit INTEGER NOT NULL DEFAULT 0 CHECK (deposit >= 0),
     status TEXT NOT NULL DEFAULT 'pending' 
