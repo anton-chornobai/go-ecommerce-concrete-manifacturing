@@ -9,7 +9,7 @@ import (
 	"math/big"
 )
 
-type VerificationaCodeManager struct {}
+type VerificationaCodeManager struct{}
 
 func (v *VerificationaCodeManager) GenerateCode() (string, error) {
 	number, err := rand.Int(rand.Reader, big.NewInt(90000))

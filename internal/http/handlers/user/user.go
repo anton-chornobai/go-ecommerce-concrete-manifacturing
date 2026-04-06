@@ -20,7 +20,7 @@ type UserResponse struct {
 	Role     string  `json:"role"`
 	Address  string  `json:"address"`
 	Number   *string `json:"number,omitempty"`
-	Verified bool   `json:"is_verified"`
+	Verified bool    `json:"is_verified"`
 }
 
 type UserHandler struct {

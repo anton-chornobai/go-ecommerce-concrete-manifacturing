@@ -1,0 +1,45 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    # Core correctness
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - ineffassign
+
+    # Code quality
+    - gosimple
+    - typecheck
+    - revive
+
+    # Style / formatting
+    - gofmt
+    - goimports
+
+    # Extra useful
+    - bodyclose
+    - contextcheck
+    - nilerr
+    - errorlint
+
+linters-settings:
+  revive:
+    rules:
+      - name: indent-error-flow
+      - name: var-naming
+
+  errcheck:
+    check-type-assertions: true
+
+issues:
+  exclude-use-default: false
+
+  # Optional: ignore noisy stuff at start
+  exclude:
+    - "Error return value of .* is not checked" # (can remove later)
+
+  max-issues-per-linter: 0
+  max-same-issues: 0

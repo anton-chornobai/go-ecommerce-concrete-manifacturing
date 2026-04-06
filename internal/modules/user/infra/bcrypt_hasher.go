@@ -8,19 +8,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type PasswordHasher struct {}
+type PasswordHasher struct{}
 
-func (h *PasswordHasher) HashPassword(password string) (string, error){
+func (h *PasswordHasher) HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	if err != nil {		
+	if err != nil {
 		return "", errors.New("123")
 	}
 
 	return string(hashedPassword), nil
 }
 
-func (h *PasswordHasher) CompareHashAndPassword(hashedPassword, password  string) error {
+func (h *PasswordHasher) CompareHashAndPassword(hashedPassword, password string) error {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 
 	if err != nil {

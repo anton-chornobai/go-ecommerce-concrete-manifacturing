@@ -23,7 +23,6 @@ func GetUsersID(next http.Handler) http.HandlerFunc {
 
 		token := cookie.Value
 
-
 		id, err := jwtmanager.GetUsersID(token)
 
 		if err != nil {

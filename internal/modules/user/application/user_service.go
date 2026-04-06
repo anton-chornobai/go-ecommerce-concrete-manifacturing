@@ -13,7 +13,6 @@ import (
 	"github.com/anton-chornobai/beton.git/pkg/utils"
 )
 
-
 type TokenManager interface {
 	GenerateToken(id string) (string, error)
 }
@@ -196,14 +195,14 @@ func (s *UserService) GetByID(token string) (*domain.User, error) {
 }
 
 func (s *UserService) IsAdmin(id string) (bool, error) {
-	isAdmin, err := s.repo.IsAdmin(id);
+	isAdmin, err := s.repo.IsAdmin(id)
 
 	if err != nil {
 		return false, fmt.Errorf("something went wrong: %w", err)
 	}
 
 	if !isAdmin {
-		return false, fmt.Errorf("unauthorized") 
+		return false, fmt.Errorf("unauthorized")
 	}
 
 	return isAdmin, nil

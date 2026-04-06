@@ -12,7 +12,6 @@ import (
 
 var ErrUserAlreadyExists = errors.New("user already exists")
 
-
 type UserRepository struct {
 	DB *sql.DB
 }
@@ -31,7 +30,6 @@ func (r *UserRepository) Signup(user *domain.User) error {
 
 	return err
 }
-
 
 func (r *UserRepository) SignupByEmail(
 	ctx context.Context,
@@ -230,7 +228,7 @@ func (r *UserRepository) IsAdmin(id string) (bool, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return  false, fmt.Errorf("user not found")
+			return false, fmt.Errorf("user not found")
 		}
 
 		return false, fmt.Errorf("db error: %w", err)

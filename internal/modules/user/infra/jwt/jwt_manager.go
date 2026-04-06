@@ -10,10 +10,10 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-type TokenService struct {}
+type TokenService struct{}
 
 func NewTokenService() *TokenService {
-	return  &TokenService{}
+	return &TokenService{}
 }
 
 func (ts *TokenService) GenerateToken(id string) (string, error) {
@@ -30,8 +30,8 @@ func (ts *TokenService) GenerateToken(id string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": claims.Subject,
-		"exp":  claims.ExpiresAt.Unix(),
-		"iat":  claims.IssuedAt.Unix(),
+		"exp": claims.ExpiresAt.Unix(),
+		"iat": claims.IssuedAt.Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(secret))
@@ -48,7 +48,6 @@ const claimsKey contextKey = "jwtClaims"
 func AddClaimsToContext(ctx context.Context, claims map[string]interface{}) context.Context {
 	return context.WithValue(ctx, claimsKey, claims)
 }
-
 
 func ValidateToken(stringToken string) (map[string]any, error) {
 	secret := os.Getenv("SECRET")

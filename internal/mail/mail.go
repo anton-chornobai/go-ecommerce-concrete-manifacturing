@@ -15,7 +15,7 @@ func SendEmailTo(to string, code string) error {
 	m.SetHeader("From", "antonchornobajj@gmail.com")
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", "Код підтвердження")
-	m.SetBody("text/html", "Введіть код підтвердження: " + "<b>" +code+" </b>")
+	m.SetBody("text/html", "Введіть код підтвердження: "+"<b>"+code+" </b>")
 	d := gomail.NewDialer("smtp.gmail.com", 587, "antonchornobajj@gmail.com", password)
 
 	if err := d.DialAndSend(m); err != nil {

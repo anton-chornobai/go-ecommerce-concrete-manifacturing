@@ -31,7 +31,7 @@ func main() {
 		log.Fatalf("failed to open db %v", err)
 	}
 	defer db.Close()
-	
+
 	router := bootstrap.App(db)
 
 	myService := &http.Server{
@@ -43,4 +43,3 @@ func main() {
 		log.Fatalf("Server failed %v", err)
 	}
 }
-

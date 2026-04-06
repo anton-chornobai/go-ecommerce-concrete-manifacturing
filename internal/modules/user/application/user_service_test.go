@@ -11,7 +11,6 @@ package application_test
 
 // type FakeHasher struct {}
 
-
 // func (f *FakeHasher) HashPassword(password string) (string, error) {
 //     return "fake-hash-" + password, nil
 // }

@@ -34,7 +34,7 @@ func AdminOnly(userService *application.UserService, next http.Handler) http.Han
 		cookie, err := r.Cookie("jwt")
 
 		if err != nil {
-			http.Error(w, "cookie" + err.Error(), http.StatusUnauthorized)
+			http.Error(w, "cookie"+err.Error(), http.StatusUnauthorized)
 			return
 		}
 

@@ -10,6 +10,7 @@ import (
 type OrdersRepository struct {
 	DB *sql.DB
 }
+
 func (o *OrdersRepository) Get(ctx context.Context, limit int) ([]domain.Order, error) {
 
 	rows, err := o.DB.QueryContext(ctx, `

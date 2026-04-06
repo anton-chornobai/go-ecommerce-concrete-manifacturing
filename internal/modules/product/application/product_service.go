@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
+
 	"os"
 	"strings"
 
@@ -13,7 +13,6 @@ import (
 
 type ProductService struct {
 	repo domain.Repository
-	log  *slog.Logger
 }
 
 type ProductPatchRequest struct {
@@ -34,7 +33,6 @@ type ProductPatchRequest struct {
 func NewProductService(repo domain.Repository) (*ProductService, error) {
 	return &ProductService{repo: repo}, nil
 }
-
 
 func (p *ProductService) GetWithLimit(ctx context.Context, limit int) ([]domain.Product, error) {
 	products, err := p.repo.GetWithLimit(ctx, limit)
