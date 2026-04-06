@@ -35,6 +35,7 @@ func NewProductService(repo domain.Repository) (*ProductService, error) {
 	return &ProductService{repo: repo}, nil
 }
 
+
 func (p *ProductService) GetWithLimit(ctx context.Context, limit int) ([]domain.Product, error) {
 	products, err := p.repo.GetWithLimit(ctx, limit)
 
@@ -52,7 +53,7 @@ func (p *ProductService) GetById(ctx context.Context, id int) (*domain.Product, 
 		return nil, err
 	}
 
-	return  product, nil
+	return product, nil
 }
 
 func (p *ProductService) Add(ctx context.Context, input domain.Product) error {
