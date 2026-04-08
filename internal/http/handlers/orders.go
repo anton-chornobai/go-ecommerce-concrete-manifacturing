@@ -3,11 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/anton-chornobai/beton.git/internal/http/middleware"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
 )
@@ -65,8 +67,18 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (o *OrdersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 	defer cancel()
+	defer r.Body.Close()
+	var order domain.Order
 
-	var order *domain.Order
+	issuerId, ok := r.Context().Value(middleware.UserIDKey).(string)
+
+	if !ok || issuerId == "" {
+		fmt.Println(issuerId)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	// Setting ID of the user who Created the Order
+	order.UserID = issuerId
 
 	err := json.NewDecoder(r.Body).Decode(&order)
 	if err != nil {
@@ -74,12 +86,18 @@ func (o *OrdersHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = o.OrdersService.Create(ctx, order)
+	id, err := o.OrdersService.Create(ctx, &order)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "plain/text")
+	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(200)
+
+	if err := json.NewEncoder(w).Encode(map[string]any{
+		"id": id,
+	}); err != nil {
+		o.log.Error("encode error", "err", err)
+	}
 }

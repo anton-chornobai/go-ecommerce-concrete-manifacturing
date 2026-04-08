@@ -78,7 +78,8 @@ func (p *ProductRepository) GetWithLimit(ctx context.Context, limit int) ([]doma
 		rating,
 		size_width,
 		size_height
-	FROM products LIMIT $1
+	FROM products
+	 LIMIT $1
 	`
 
 	rows, err := p.DB.QueryContext(ctx, query, limit)
@@ -122,6 +123,7 @@ func (p *ProductRepository) GetWithLimit(ctx context.Context, limit int) ([]doma
 
 	return products, nil
 }
+
 
 func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Product, error) {
 	var product domain.Product

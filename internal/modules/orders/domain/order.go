@@ -12,7 +12,7 @@ type OrderStatus string
 type PaymentStatus string
 
 const (
-	OrderPending   OrderStatus = "очікується"
+	OrderPending   OrderStatus = "pending"
 	OrderConfirmed OrderStatus = "підтверджено"
 	OrderShipped   OrderStatus = "відправлено"
 	OrderDelivered OrderStatus = "доставлено"
@@ -20,7 +20,7 @@ const (
 )
 
 const (
-	PaymentUnpaid   PaymentStatus = "неоплачено"
+	PaymentUnpaid   PaymentStatus = "unpaid"
 	PaymentPaid     PaymentStatus = "оплачено"
 	PaymentFailed   PaymentStatus = "не вдалося"
 	PaymentRefunded PaymentStatus = "повернено"

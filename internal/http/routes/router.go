@@ -44,7 +44,7 @@ func SetUpRoutes(
 	//PROFILE
 	router.HandleFunc("GET /profile", userHandler.GetByID)
 	//ORDERS
-	router.HandleFunc("POST /v1/orders", orderHandler.Create)
+	router.HandleFunc("POST /v1/orders", middleware.GetUsersID(http.HandlerFunc(orderHandler.Create)))
 	router.HandleFunc("GET /v1/orders", orderHandler.Get)
 	//PRODUCTS
 	router.Handle("GET /v1/products", http.HandlerFunc(productHandler.GetProducts))

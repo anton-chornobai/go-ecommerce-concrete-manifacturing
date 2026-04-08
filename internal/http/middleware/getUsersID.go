@@ -3,10 +3,15 @@ package middleware
 import (
 	"context"
 	"errors"
+
 	"net/http"
 
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 )
+
+type ContextKey string
+
+const UserIDKey ContextKey = "userID"
 
 func GetUsersID(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +35,7 @@ func GetUsersID(next http.Handler) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "userID", id)
+		ctx := context.WithValue(r.Context(), UserIDKey, id)
 
 		newRequestContext := r.WithContext(ctx)
 

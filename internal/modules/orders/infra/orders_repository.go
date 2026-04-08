@@ -120,12 +120,12 @@ func (o *OrdersRepository) Get(ctx context.Context, limit int) ([]domain.Order, 
 	return orders, nil
 }
 
-func (o *OrdersRepository) Create(ctx context.Context, order *domain.Order) error {
+func (o *OrdersRepository) Create(ctx context.Context, order *domain.Order) (int, error) {
 	tx, err := o.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("start tx: %w", err)
+		return 0, fmt.Errorf("start tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO orders (
@@ -162,7 +162,7 @@ func (o *OrdersRepository) Create(ctx context.Context, order *domain.Order) erro
 	).Scan(&order.ID)
 
 	if err != nil {
-		return fmt.Errorf("insert order: %w", err)
+		return 0, fmt.Errorf("insert order: %w", err)
 	}
 
 	for _, item := range order.Items {
@@ -196,15 +196,15 @@ func (o *OrdersRepository) Create(ctx context.Context, order *domain.Order) erro
 		)
 
 		if err != nil {
-			return fmt.Errorf("insert order item: %w", err)
+			return 0, fmt.Errorf("insert order item: %w", err)
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit tx: %w", err)
+		return 0, fmt.Errorf("commit tx: %w", err)
 	}
 
-	return nil
+	return order.ID, nil
 }
 
 func (o *OrdersRepository) Delete(ctx context.Context, id int) error {
