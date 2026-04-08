@@ -37,7 +37,7 @@ func (m *MockRepo) Add(ctx context.Context, product *domain.Product) error {
 	return nil
 }
 
-func (m *MockRepo) GetWithLimit(ctx context.Context, limit int) ([]domain.Product, error) {
+func (m *MockRepo) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
 	m.GetWithLimitCalled = true
 	m.LastLimit = limit
 	if m.GetWithLimitErr != nil {

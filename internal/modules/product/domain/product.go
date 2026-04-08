@@ -6,7 +6,7 @@ type ProductStatus string
 
 const (
 	ProductArchived ProductStatus = "archived"
-	ProductPublic   ProductStatus = "displayed"
+	ProductDisplayed  ProductStatus = "displayed"
 )
 
 type Size struct {
@@ -23,7 +23,7 @@ type Product struct {
 	Status        ProductStatus `json:"status"`
 	ImageURL      *string       `json:"image_url"`
 	Description   *string       `json:"description,omitempty"`
-	StockQuantity *int          `json:"stockQuantity,omitempty"`
+	StockQuantity *int          `json:"stock_quantity,omitempty"`
 	Weight        *int          `json:"weight,omitempty"`
 	Rating        *int          `json:"rating,omitempty"`
 	Size          *Size         `json:"size,omitempty"`
@@ -70,7 +70,7 @@ func NewProduct(
 		return nil, errors.New("product type is required")
 	}
 
-	if status != ProductArchived && status != ProductPublic {
+	if status != ProductArchived && status != ProductDisplayed {
 		return nil, errors.New("invalid product status")
 	}
 

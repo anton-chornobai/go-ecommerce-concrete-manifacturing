@@ -11,10 +11,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
 	"net/http"
 	"time"
-
 	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 )
@@ -47,7 +45,22 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	products, err := h.ProductService.GetWithLimit(ctx, 20)
+	var status *domain.ProductStatus
+
+	queryParams := r.URL.Query()
+	statusVal := queryParams.Get("status")
+	fmt.Println(statusVal)
+	if statusVal == "" ||
+		(statusVal != string(domain.ProductArchived) &&
+			statusVal != string(domain.ProductDisplayed)) {
+		status = nil
+	} else {
+		s := domain.ProductStatus(statusVal)
+		status = &s
+	}
+	fmt.Println(status)
+
+	products, err := h.ProductService.GetProducts(ctx, 20, status)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

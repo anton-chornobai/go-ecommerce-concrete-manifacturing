@@ -34,8 +34,8 @@ func NewProductService(repo domain.Repository) (*ProductService, error) {
 	return &ProductService{repo: repo}, nil
 }
 
-func (p *ProductService) GetWithLimit(ctx context.Context, limit int) ([]domain.Product, error) {
-	products, err := p.repo.GetWithLimit(ctx, limit)
+func (p *ProductService) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
+	products, err := p.repo.GetProducts(ctx, limit, status)
 
 	if err != nil {
 		return nil, err

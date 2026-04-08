@@ -62,7 +62,7 @@ func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) er
 	return nil
 }
 
-func (p *ProductRepository) GetWithLimit(ctx context.Context, limit int) ([]domain.Product, error) {
+func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
 	var products []domain.Product
 	query := `SELECT 
 		id,
@@ -78,11 +78,23 @@ func (p *ProductRepository) GetWithLimit(ctx context.Context, limit int) ([]doma
 		rating,
 		size_width,
 		size_height
-	FROM products
-	 LIMIT $1
-	`
+	 FROM products
+	`	
 
-	rows, err := p.DB.QueryContext(ctx, query, limit)
+	args := []any{}
+	argPos := 1 
+	if status != nil {
+		query += fmt.Sprintf(" WHERE status=$%d", argPos)
+		args = append(args, *status)
+		argPos++
+	}
+	if limit > 0 {
+		query += fmt.Sprintf(" LIMIT $%d", argPos)
+		args = append(args, limit)
+		argPos++
+	}
+	
+	rows, err := p.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute query: %w", err)
 	}
@@ -121,9 +133,12 @@ func (p *ProductRepository) GetWithLimit(ctx context.Context, limit int) ([]doma
 		products = append(products, product)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
+
 	return products, nil
 }
-
 
 func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Product, error) {
 	var product domain.Product

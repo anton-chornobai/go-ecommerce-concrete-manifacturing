@@ -5,7 +5,7 @@ import (
 )
 
 type Repository interface {
-	GetWithLimit(ctx context.Context, limit int) ([]Product, error)
+	GetProducts(ctx context.Context, limit int, status *ProductStatus) ([]Product, error)
 	GetByID(ctx context.Context, id int) (*Product, error)
 	Add(ctx context.Context, product *Product) error
 	DeleteByID(ctx context.Context, id int) error
