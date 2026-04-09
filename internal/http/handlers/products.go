@@ -6,15 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"net/http"
 	"time"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 )
 
 type ProductHandler struct {
@@ -49,7 +49,7 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	queryParams := r.URL.Query()
 	statusVal := queryParams.Get("status")
-	fmt.Println(statusVal)
+
 	if statusVal == "" ||
 		(statusVal != string(domain.ProductArchived) &&
 			statusVal != string(domain.ProductDisplayed)) {
@@ -58,7 +58,6 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 		s := domain.ProductStatus(statusVal)
 		status = &s
 	}
-	fmt.Println(status)
 
 	products, err := h.ProductService.GetProducts(ctx, 20, status)
 

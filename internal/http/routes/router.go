@@ -32,9 +32,7 @@ func SetUpRoutes(
 		UserService: userService,
 	}
 
-	orderHandler := handlers.OrdersHandler{
-		OrdersService: orderService,
-	}
+	orderHandler := handlers.NewOrdersHandler(logger, orderService)
 
 	router := http.NewServeMux()
 	//AUTH
@@ -46,10 +44,10 @@ func SetUpRoutes(
 	//ORDERS
 	router.HandleFunc("POST /v1/orders", middleware.GetUsersID(http.HandlerFunc(orderHandler.Create)))
 	router.HandleFunc("GET /v1/orders", orderHandler.Get)
+	router.Handle("DELETE /v1/orders/{id}", middleware.AdminOnly(userService, http.HandlerFunc(orderHandler.Delete)))
 	//PRODUCTS
 	router.Handle("GET /v1/products", http.HandlerFunc(productHandler.GetProducts))
 	router.Handle("POST /v1/products", middleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
-
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
 	router.Handle("DELETE /v1/products/{id}", http.HandlerFunc(productHandler.DeleteByID))
 	router.Handle("PATCH /v1/products/{id}", http.HandlerFunc(productHandler.Update))

@@ -26,7 +26,7 @@ func App(db *sql.DB) http.Handler {
 	tokenManager := jwtmanager.NewTokenService()
 	userRepo := &infra.UserRepository{DB: db}
 	userService := application.NewUserService(userRepo, tokenManager, passwordHasher, log, verificationCodeManager)
-
+	
 	productRepo := &productRepo.ProductRepository{DB: db}
 	productService, err := productService.NewProductService(productRepo)
 	if err != nil {

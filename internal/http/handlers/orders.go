@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anton-chornobai/beton.git/internal/http/middleware"
@@ -17,6 +18,9 @@ import (
 type OrdersHandler struct {
 	log           *slog.Logger
 	OrdersService *application.OrderService
+}
+func NewOrdersHandler(log *slog.Logger,orderService *application.OrderService ) *OrdersHandler {
+	return &OrdersHandler{log: log, OrdersService: orderService}
 }
 
 func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +41,7 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	orders, err := o.OrdersService.Get(ctx, limit)
 	if err != nil {
-		http.Error(w, "Internal", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -60,7 +64,7 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"data":    orders,
 	})
 	if err != nil {
-		o.log.Info("encode error:", err)
+		o.log.Info("encode error:", fmt.Sprintf("er %w", err))
 	}
 }
 
@@ -99,5 +103,35 @@ func (o *OrdersHandler) Create(w http.ResponseWriter, r *http.Request) {
 		"id": id,
 	}); err != nil {
 		o.log.Error("encode error", "err", err)
+	}
+}
+
+func (o *OrdersHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second * 5)
+	defer cancel()
+
+	partsOfURL := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	strID := partsOfURL[len(partsOfURL)-1]
+	intID, err := strconv.Atoi(strID)
+	if err != nil {
+		http.Error(w, "Failed to convert string id", http.StatusBadRequest)
+		return
+	}
+
+	err = o.OrdersService.Delete(ctx, intID)
+	if err != nil {
+		o.log.Warn("OrderService.Delete", "ERR:", err)
+		http.Error(w, "Failed to delete order", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"message": "successfully deleted",
+	}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
 	}
 }
