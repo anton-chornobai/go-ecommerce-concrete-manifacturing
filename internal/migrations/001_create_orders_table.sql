@@ -57,16 +57,25 @@ CREATE TABLE order_item (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     product_id INT REFERENCES products(id),
-    title TEXT NOT NULL,
+    title VARCHAR(50) NOT NULL ,
     unit_price INTEGER NOT NULL CHECK (unit_price >= 0),
-    type TEXT,
+    type VARCHAR(55),
     quantity INTEGER NOT NULL CHECK (quantity > 0),
-    color TEXT,
+    color VARCHAR(100),
     height INTEGER CHECK (height >= 0),
     width INTEGER CHECK (width >= 0),
     material TEXT,
     thickness INTEGER CHECK (thickness >= 0)
 );
+
+CREATE TABLE user_contact (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(254) NOT NULL,
+    number VARCHAR(30),
+    message TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NULL()
+)
 
 -- +goose Down
 
@@ -74,3 +83,4 @@ DROP TABLE IF EXISTS order_item;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS user_contact;
