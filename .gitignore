@@ -1,5 +1,22 @@
 .env
+.env.local
+.env.*.local
 /uploads
 /configs/app.yaml
 git rm --cached configs/app.yaml
+
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
