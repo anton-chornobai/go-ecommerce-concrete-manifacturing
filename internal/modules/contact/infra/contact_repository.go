@@ -43,7 +43,7 @@ func (r *UserContactRepository) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("delete user_contact, failed to check affected rows: %w", err)
 	}
 	if affected == 0 {
-		return fmt.Errorf("no user_contact found with id %s", id)
+		return fmt.Errorf("%w з id %s", ErrContactNotFound, id)
 	}
 
 	return nil

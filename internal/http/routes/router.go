@@ -57,6 +57,8 @@ func SetUpRoutes(
 	router.Handle("PATCH /v1/products/{id}", http.HandlerFunc(productHandler.Update))
 	//CONTACTS
 	router.HandleFunc("POST /contacts", userContactHandler.Post)
+	router.HandleFunc("DELETE /contacts/{id}", userContactHandler.Delete)
+
 
 	return middleware.LogMethodInfo(logger, middleware.CorsMiddleware(router))
 }
