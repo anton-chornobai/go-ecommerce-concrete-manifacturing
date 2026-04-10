@@ -18,6 +18,7 @@ var (
 	ErrInvalidNumber       = fmt.Errorf("невірний номер телефону, має бути від 7 до 12 цифр")
 	ErrInvalidNumberSymbol = fmt.Errorf("номер телефону містить недопустимі символи")
 	ErrWrongEmailFormat    = errors.New("невірний формат емейлу")
+	ErrContactNotFound     = errors.New("контакт не знайдено")
 )
 
 type UserContact struct {

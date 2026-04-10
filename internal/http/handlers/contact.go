@@ -10,7 +10,6 @@ import (
 
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/dto"
-	"github.com/anton-chornobai/beton.git/internal/modules/contact/infra"
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
 )
 
@@ -91,7 +90,7 @@ func (h *UserContactHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err := h.UserContactService.Delete(ctx, id)
 	if err != nil {
-		if errors.Is(err, infra.ErrContactNotFound) {
+		if errors.Is(err, domain.ErrContactNotFound) {
 			h.logger.Warn("UserContactHandler.Delete", "err", err.Error())
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
