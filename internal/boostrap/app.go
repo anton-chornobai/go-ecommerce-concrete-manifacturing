@@ -13,8 +13,11 @@ import (
 	productService "github.com/anton-chornobai/beton.git/internal/modules/product/application"
 	productRepo "github.com/anton-chornobai/beton.git/internal/modules/product/infra"
 
+	userContactRepo "github.com/anton-chornobai/beton.git/internal/modules/contact/infra"
+	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
+
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 )
 
@@ -26,7 +29,7 @@ func App(db *sql.DB) http.Handler {
 	tokenManager := jwtmanager.NewTokenService()
 	userRepo := &infra.UserRepository{DB: db}
 	userService := application.NewUserService(userRepo, tokenManager, passwordHasher, log, verificationCodeManager)
-	
+
 	productRepo := &productRepo.ProductRepository{DB: db}
 	productService, err := productService.NewProductService(productRepo)
 	if err != nil {
@@ -37,7 +40,10 @@ func App(db *sql.DB) http.Handler {
 	ordersRepo := &ordersRepo.OrdersRepository{DB: db}
 	orderService := ordersApp.NewOrderService(ordersRepo, log)
 
-	router := routes.SetUpRoutes(log, userService, orderService, *productService)
+	userContactRepo := &userContactRepo.UserContactRepository{DB: db}
+	userContactService := service.NewUserContactService(userContactRepo)
+
+	router := routes.SetUpRoutes(log, userService, orderService, *productService, *userContactService)
 
 	return router
 }

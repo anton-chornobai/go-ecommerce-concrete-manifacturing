@@ -68,14 +68,14 @@ CREATE TABLE order_item (
     thickness INTEGER CHECK (thickness >= 0)
 );
 
-CREATE TABLE user_contact (
+CREATE TABLE user_contacts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     email VARCHAR(254) NOT NULL,
     number VARCHAR(30),
     message TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NULL()
-)
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
 -- +goose Down
 
@@ -83,4 +83,4 @@ DROP TABLE IF EXISTS order_item;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS user_contact;
+DROP TABLE IF EXISTS user_contacts;

@@ -9,6 +9,7 @@ import (
 	user_handler "github.com/anton-chornobai/beton.git/internal/http/handlers/user"
 
 	"github.com/anton-chornobai/beton.git/internal/http/middleware"
+	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	productService "github.com/anton-chornobai/beton.git/internal/modules/product/application"
 	userService "github.com/anton-chornobai/beton.git/internal/modules/user/application"
@@ -19,6 +20,7 @@ func SetUpRoutes(
 	userService *userService.UserService,
 	orderService *application.OrderService,
 	productService productService.ProductService,
+	userContactService service.UserContactService,
 ) http.Handler {
 	authHandler := user_handler.AuthHandler{
 		UserService: userService,
@@ -33,6 +35,8 @@ func SetUpRoutes(
 	}
 
 	orderHandler := handlers.NewOrdersHandler(logger, orderService)
+
+	userContactHandler := handlers.NewUserContactHandler(&userContactService, logger)
 
 	router := http.NewServeMux()
 	//AUTH
@@ -51,6 +55,8 @@ func SetUpRoutes(
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
 	router.Handle("DELETE /v1/products/{id}", http.HandlerFunc(productHandler.DeleteByID))
 	router.Handle("PATCH /v1/products/{id}", http.HandlerFunc(productHandler.Update))
+	//CONTACTS
+	router.HandleFunc("POST /contacts", userContactHandler.Post)
 
 	return middleware.LogMethodInfo(logger, middleware.CorsMiddleware(router))
 }

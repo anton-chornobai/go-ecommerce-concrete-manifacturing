@@ -79,10 +79,10 @@ func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *
 		size_width,
 		size_height
 	 FROM products
-	`	
+	`
 
 	args := []any{}
-	argPos := 1 
+	argPos := 1
 	if status != nil {
 		query += fmt.Sprintf(" WHERE status=$%d", argPos)
 		args = append(args, *status)
@@ -93,7 +93,7 @@ func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *
 		args = append(args, limit)
 		argPos++
 	}
-	
+
 	rows, err := p.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute query: %w", err)

@@ -19,7 +19,8 @@ type OrdersHandler struct {
 	log           *slog.Logger
 	OrdersService *application.OrderService
 }
-func NewOrdersHandler(log *slog.Logger,orderService *application.OrderService ) *OrdersHandler {
+
+func NewOrdersHandler(log *slog.Logger, orderService *application.OrderService) *OrdersHandler {
 	return &OrdersHandler{log: log, OrdersService: orderService}
 }
 
@@ -107,7 +108,7 @@ func (o *OrdersHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *OrdersHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second * 5)
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 	defer cancel()
 
 	partsOfURL := strings.Split(strings.Trim(r.URL.Path, "/"), "/")

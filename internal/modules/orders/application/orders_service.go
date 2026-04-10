@@ -42,10 +42,10 @@ func (o *OrderService) Create(ctx context.Context, req *domain.Order) (int, erro
 		return 0, err
 	}
 
-	return  id, nil
+	return id, nil
 }
 
-func (o *OrderService) Delete(ctx context.Context, id int) (error) {
+func (o *OrderService) Delete(ctx context.Context, id int) error {
 	err := o.repo.Delete(ctx, id)
 
 	if err != nil {

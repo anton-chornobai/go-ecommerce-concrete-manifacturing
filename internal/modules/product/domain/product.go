@@ -5,8 +5,8 @@ import "errors"
 type ProductStatus string
 
 const (
-	ProductArchived ProductStatus = "archived"
-	ProductDisplayed  ProductStatus = "displayed"
+	ProductArchived  ProductStatus = "archived"
+	ProductDisplayed ProductStatus = "displayed"
 )
 
 type Size struct {
