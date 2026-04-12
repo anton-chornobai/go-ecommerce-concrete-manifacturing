@@ -59,6 +59,5 @@ func SetUpRoutes(
 	router.HandleFunc("POST /contacts", userContactHandler.Post)
 	router.HandleFunc("DELETE /contacts/{id}", userContactHandler.Delete)
 
-
 	return middleware.LogMethodInfo(logger, middleware.CorsMiddleware(router))
 }

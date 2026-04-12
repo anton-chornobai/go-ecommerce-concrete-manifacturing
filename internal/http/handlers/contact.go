@@ -97,8 +97,8 @@ func (h *UserContactHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 
 		h.logger.Warn("UserContactHandler.Delete", "err", err.Error())
-			http.Error(w, "Щось пішло не так", http.StatusInternalServerError)
-			return
+		http.Error(w, "Щось пішло не так", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

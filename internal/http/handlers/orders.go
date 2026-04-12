@@ -65,7 +65,7 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"data":    orders,
 	})
 	if err != nil {
-		o.log.Info("encode error:", fmt.Sprintf("er %w", err))
+		o.log.Info("encode error:", "err", err.Error())
 	}
 }
 
