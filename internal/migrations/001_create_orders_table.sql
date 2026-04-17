@@ -71,11 +71,19 @@ CREATE TABLE order_item (
 CREATE TABLE user_contacts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(254) NOT NULL,
-    number VARCHAR(30),
+    email VARCHAR(254),
+    number VARCHAR(30) NOT NULL,
     message TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_user_contacts_email_created_at
+ON user_contacts (email, created_at);
+
+CREATE INDEX idx_user_contacts_number_created_at
+ON user_contacts (number, created_at);
+
+-- INSERT INTO users ('role', 'email', 'verified') VALUES ('admin', 'antonchornobajj@gmail.com', true);
 
 -- +goose Down
 

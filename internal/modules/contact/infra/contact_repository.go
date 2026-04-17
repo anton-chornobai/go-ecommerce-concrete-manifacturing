@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/domain"
 )
@@ -13,6 +14,9 @@ type UserContactRepository struct {
 }
 
 func (r *UserContactRepository) Save(ctx context.Context, userContact *domain.UserContact) error {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
 	_, err := r.DB.ExecContext(ctx, `
 		INSERT INTO user_contacts (id, name, email, number, message, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -26,7 +30,7 @@ func (r *UserContactRepository) Save(ctx context.Context, userContact *domain.Us
 	)
 
 	if err != nil {
-		return fmt.Errorf("insert user_contact: %w", err)
+		return fmt.Errorf("insert user_contact (id=%s): %w", userContact.ID, err)
 	}
 
 	return nil

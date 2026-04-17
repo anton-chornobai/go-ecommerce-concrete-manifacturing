@@ -36,9 +36,13 @@ func (h *UserContactHandler) Post(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid data", http.StatusBadRequest)
 		return
 	}
-	if req.Name == "" || req.Email == "" || req.Message == "" {
-		http.Error(w, "missing required fields", http.StatusBadRequest)
+	if req.Name == "" || req.Message == "" || req.Number == "" {
+		http.Error(w, "обов'язкові поля пусті", http.StatusBadRequest)
 		return
+	}
+
+	if req.Email != nil && *req.Email == "" {
+		req.Email = nil
 	}
 
 	err := h.UserContactService.Post(ctx, req)

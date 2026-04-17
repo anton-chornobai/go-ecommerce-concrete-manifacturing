@@ -25,34 +25,36 @@ var (
 type UserContact struct {
 	ID        uuid.UUID
 	Name      string
-	Email     string
+	Email     *string
 	Message   string
-	Number    *string
+	Number    string
 	CreatedAt time.Time
 }
 
-func NewContact(name, email, message string, number *string) (*UserContact, error) {
+func NewContact(name string, email *string, message string, number string) (*UserContact, error) {
 	if len(name) > maxNameLength {
 		return nil, ErrNameTooLong
 	}
-	if len(email) > maxEmailLength {
-		return nil, ErrEmailTooLong
-	}
-	if !strings.Contains(email, "@") {
-		return nil, ErrWrongEmailFormat
+
+	if email != nil {
+		if len(*email) > maxEmailLength {
+			return nil, ErrEmailTooLong
+		}
+		if !strings.Contains(*email, "@") {
+			return nil, ErrWrongEmailFormat
+		}
 	}
 
-	if number != nil {
-		if len(*number) < 7 || len(*number) > 12 {
-			return nil, ErrInvalidNumber
+	if len(number) < 7 || len(number) > 12 {
+		return nil, ErrInvalidNumber
+	}
+
+	for i, r := range number {
+		if i == 0 && r == '+' {
+			continue
 		}
-		for i, r := range *number {
-			if i == 0 && r == '+' {
-				continue
-			}
-			if r < '0' || r > '9' {
-				return nil, ErrInvalidNumberSymbol
-			}
+		if r < '0' || r > '9' {
+			return nil, ErrInvalidNumberSymbol
 		}
 	}
 
