@@ -26,9 +26,7 @@ func SetUpRoutes(
 		UserService: userService,
 	}
 
-	productHandler := handlers.ProductHandler{
-		ProductService: productService,
-	}
+	productHandler := handlers.NewProductsHandler(productService, logger)
 
 	userHandler := user_handler.UserHandler{
 		UserService: userService,

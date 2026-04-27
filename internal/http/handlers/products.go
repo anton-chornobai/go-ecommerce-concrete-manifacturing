@@ -28,8 +28,8 @@ type ProductHandler struct {
 	logger         *slog.Logger
 }
 
-func NewProductsHandler(productService application.ProductService) *ProductHandler {
-	return &ProductHandler{ProductService: productService}
+func NewProductsHandler(productService application.ProductService, logger *slog.Logger) *ProductHandler {
+	return &ProductHandler{ProductService: productService, logger: logger}
 }
 
 func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
