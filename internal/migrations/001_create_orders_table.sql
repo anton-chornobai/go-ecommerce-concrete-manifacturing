@@ -25,7 +25,7 @@ CREATE TABLE products (
     color TEXT,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'archived' CHECK (status IN ('archived', 'displayed')), 
-    stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
+    cd  INTEGER DEFAULT 0 CHECK,
     weight_grams INTEGER CHECK (weight_grams >= 0),
     rating SMALLINT CHECK (rating >= 0 AND rating <= 5),
     size_width INTEGER CHECK (size_width >= 0),

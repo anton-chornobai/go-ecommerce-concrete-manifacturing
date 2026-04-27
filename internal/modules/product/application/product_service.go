@@ -5,14 +5,19 @@ import (
 	"errors"
 	"fmt"
 
+	"mime/multipart"
+	"time"
+
 	"os"
 	"strings"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
 )
 
 type ProductService struct {
-	repo domain.Repository
+	imageStorage domain.GCSUploader
+	repo         domain.Repository
 }
 
 type ProductPatchRequest struct {
@@ -30,8 +35,8 @@ type ProductPatchRequest struct {
 	SizeHeight    *int                  `json:"size_height,omitempty"`
 }
 
-func NewProductService(repo domain.Repository) (*ProductService, error) {
-	return &ProductService{repo: repo}, nil
+func NewProductService(repo domain.Repository, uploader domain.GCSUploader) (*ProductService, error) {
+	return &ProductService{repo: repo, imageStorage: uploader}, nil
 }
 
 func (p *ProductService) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
@@ -54,32 +59,53 @@ func (p *ProductService) GetById(ctx context.Context, id int) (*domain.Product, 
 	return product, nil
 }
 
-func (p *ProductService) Add(ctx context.Context, input domain.Product) error {
-	product, err := domain.NewProduct(
-		input.Price,
-		input.Title,
-		input.Type,
-		input.Color,
-		domain.ProductStatus(input.Status),
-		input.ImageURL,
-		input.StockQuantity,
-		input.Description,
-		input.Weight,
-		input.Rating,
-		input.Size,
-	)
+func (p *ProductService) Add(
+    ctx context.Context,
+    input *dto.ProductPostRequest,
+    file multipart.File,
+    header *multipart.FileHeader,
+) error {
+    if input == nil {
+        return errors.New("input data is required")
+    }
 
-	if err != nil {
-		return err
-	}
+    var imageURL *string
+    if file != nil && header != nil {
 
-	err = p.repo.Add(ctx, product)
+        filename := fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename)
+        url, err := p.imageStorage.Upload(ctx, file, filename)
+        if err != nil {
+            return fmt.Errorf("upload failed: %w", err)
+        }
+        imageURL = &url
+    }
 
-	if err != nil {
-		return err
-	}
+    var size *domain.Size
+    if input.SizeHeight != nil && input.SizeWidth != nil {
+        size = &domain.Size{
+            Width:  *input.SizeWidth,
+            Height: *input.SizeHeight,
+        }
+    }
+	fmt.Printf("%v, %v, %v", input, imageURL, file)
+    product, err := domain.NewProduct(
+        input.Price,
+        input.Title,
+        input.Type,
+        input.Color,
+        input.Status,
+        imageURL,
+        input.StockQuantity,
+        input.Description,
+        input.Weight,
+        input.Rating,
+        size,
+    )
+    if err != nil {
+        return err
+    }
 
-	return nil
+    return p.repo.Add(ctx, product)
 }
 
 func (p *ProductService) DeleteByID(ctx context.Context, id int) error {
@@ -105,9 +131,28 @@ func (p *ProductService) DeleteByID(ctx context.Context, id int) error {
 	return nil
 }
 
-func (p *ProductService) Update(ctx context.Context, id int, req ProductPatchRequest) error {
+func (p *ProductService) Update(
+	ctx context.Context,
+	id int,
+	req ProductPatchRequest,
+	file multipart.File,
+	header *multipart.FileHeader,
+) error {
 
-	product := domain.ProductUpdate{
+	if file != nil && header != nil {
+		defer file.Close()
+
+		filename := fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename)
+
+		url, err := p.imageStorage.Upload(ctx, file, filename)
+		if err != nil {
+			return fmt.Errorf("upload failed: %w", err)
+		}
+
+		req.ImageURL = &url
+	}
+
+	update := domain.ProductUpdate{
 		Price:         req.Price,
 		Title:         req.Title,
 		ProductType:   req.ProductType,
@@ -121,11 +166,6 @@ func (p *ProductService) Update(ctx context.Context, id int, req ProductPatchReq
 		SizeWidth:     req.SizeWidth,
 		SizeHeight:    req.SizeHeight,
 	}
-	err := p.repo.Update(ctx, id, product)
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return p.repo.Update(ctx, id, update)
 }

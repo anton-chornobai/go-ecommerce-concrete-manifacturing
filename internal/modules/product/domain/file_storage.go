@@ -5,6 +5,6 @@ import (
 	"io"
 )
 
-type FileStorage interface {
+type GCSUploader interface {
 	Upload(ctx context.Context, file io.Reader, filename string) (string, error)
 }	

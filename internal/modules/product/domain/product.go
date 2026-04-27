@@ -1,13 +1,25 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+)
 
 type ProductStatus string
+
 
 const (
 	ProductArchived  ProductStatus = "archived"
 	ProductDisplayed ProductStatus = "displayed"
 )
+
+func (s ProductStatus) IsValid() bool {
+	switch s {
+	case ProductArchived, ProductDisplayed:
+		return true
+	default:
+		return false
+	}
+}
 
 type Size struct {
 	Width  int `json:"width"`
@@ -19,9 +31,9 @@ type Product struct {
 	Price         int           `json:"price"`
 	Title         string        `json:"title"`
 	Type          string        `json:"type"`
-	Color         *string       `json:"color"`
+	Color         *string       `json:"color,omitempty"`
 	Status        ProductStatus `json:"status"`
-	ImageURL      *string       `json:"image_url"`
+	ImageURL      *string       `json:"image_url,omitempty"`
 	Description   *string       `json:"description,omitempty"`
 	StockQuantity *int          `json:"stock_quantity,omitempty"`
 	Weight        *int          `json:"weight,omitempty"`

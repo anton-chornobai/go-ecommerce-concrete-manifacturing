@@ -17,7 +17,6 @@ type ProductRepository struct {
 
 func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) error {
 	var id int
-
 	var sizeWidth *int
 	var sizeHeight *int
 
@@ -25,26 +24,21 @@ func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) er
 		sizeWidth = &product.Size.Width
 		sizeHeight = &product.Size.Height
 	}
+
 	err := p.DB.QueryRowContext(ctx, `
 		INSERT INTO products (
-			price,
-			title,
-			type,
-			image_url,
-			color,
-			description,
-			stock_quantity,
-			weight_grams,
-			rating,
-			size_width,
-			size_height
+			price, title, type, status, image_url, color,
+			description, stock_quantity, weight_grams, rating,
+			size_width, size_height
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-		)
-		RETURNING id;
-	`, product.Price,
+			$1, $2, $3, $4, $5, $6,
+			$7, $8, $9, $10,
+			$11, $12
+		) RETURNING id;`,
+		product.Price,
 		product.Title,
 		product.Type,
+		product.Status,
 		product.ImageURL,
 		product.Color,
 		product.Description,
@@ -56,12 +50,10 @@ func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) er
 	).Scan(&id)
 
 	if err != nil {
-		return fmt.Errorf("couldnt add new product: %w", err)
+		return fmt.Errorf("couldn't add new product: %w", err)
 	}
-
 	return nil
 }
-
 func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
 	var products []domain.Product
 	query := `SELECT 
@@ -102,27 +94,55 @@ func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *
 
 	for rows.Next() {
 		var product domain.Product
-		var width, height sql.NullInt64
+		var (
+			width, height                 sql.NullInt64
+			stockQuantity, weight, rating sql.NullInt64
+			imageURL, color, description  sql.NullString
+		)
 
 		err = rows.Scan(
 			&product.ID,
 			&product.Price,
 			&product.Title,
 			&product.Type,
-			&product.ImageURL,
-			&product.Color,
-			&product.Description,
+			&imageURL,
+			&color,
+			&description,
 			&product.Status,
-			&product.StockQuantity,
-			&product.Weight,
-			&product.Rating,
+			&stockQuantity,
+			&weight,
+			&rating,
 			&width,
 			&height,
 		)
-
+		fmt.Println("DB IMAGE RAW:", imageURL.Valid, imageURL.String)
 		if err != nil {
 			return nil, fmt.Errorf("fail scanning product from DB: %w", err)
 		}
+
+		if imageURL.Valid {
+			product.ImageURL = &imageURL.String
+		}
+		if color.Valid {
+			product.Color = &color.String
+		}
+		if description.Valid {
+			product.Description = &description.String
+		}
+
+		if stockQuantity.Valid {
+			v := int(stockQuantity.Int64)
+			product.StockQuantity = &v
+		}
+		if weight.Valid {
+			v := int(weight.Int64)
+			product.Weight = &v
+		}
+		if rating.Valid {
+			v := int(rating.Int64)
+			product.Rating = &v
+		}
+
 		if width.Valid && height.Valid {
 			product.Size = &domain.Size{
 				Width:  int(width.Int64),
@@ -199,44 +219,42 @@ func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 }
 
 func (r *ProductRepository) Update(ctx context.Context, id int, req domain.ProductUpdate) error {
-	var sb strings.Builder
+
+	setParts := []string{}
 	args := []any{}
 	i := 1
 
-	sb.WriteString("UPDATE products SET ")
-
-	fields := []struct {
-		column string
-		value  any
-	}{
-		{"price", req.Price},
-		{"title", req.Title},
-		{"type", req.ProductType},
-		{"image_url", req.ImageURL},
-		{"color", req.Color},
-		{"status", req.Status},
-		{"description", req.Description},
-		{"stock_quantity", req.StockQuantity},
-		{"weight_grams", req.WeightGrams},
-		{"rating", req.Rating},
-		{"size_width", req.SizeWidth},
-		{"size_height", req.SizeHeight},
-	}
-
-	for _, f := range fields {
-		if f.value != nil {
-			fmt.Fprintf(&sb, "%s=$%d,", f.column, i)
-			args = append(args, f.value)
+	add := func(column string, value any) {
+		if value != nil {
+			setParts = append(setParts, fmt.Sprintf("%s=$%d", column, i))
+			args = append(args, value)
 			i++
 		}
 	}
 
-	if len(args) == 0 {
+	add("price", req.Price)
+	add("title", req.Title)
+	add("type", req.ProductType)
+	add("image_url", req.ImageURL)
+	add("color", req.Color)
+	add("status", req.Status)
+	add("description", req.Description)
+	add("stock_quantity", req.StockQuantity)
+	add("weight_grams", req.WeightGrams)
+	add("rating", req.Rating)
+	add("size_width", req.SizeWidth)
+	add("size_height", req.SizeHeight)
+
+	if len(setParts) == 0 {
 		return fmt.Errorf("no fields to update")
 	}
 
-	query := strings.TrimSuffix(sb.String(), ",")
-	query += fmt.Sprintf(" WHERE id=$%d", i)
+	query := fmt.Sprintf(
+		"UPDATE products SET %s WHERE id=$%d",
+		strings.Join(setParts, ", "),
+		i,
+	)
+
 	args = append(args, id)
 
 	res, err := r.DB.ExecContext(ctx, query, args...)

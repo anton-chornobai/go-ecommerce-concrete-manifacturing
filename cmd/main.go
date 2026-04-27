@@ -5,12 +5,11 @@ import (
 	"log"
 	"net/http"
 
-	"strconv"
-	// "github.com/redis/go-redis/v9"
 	"github.com/anton-chornobai/beton.git/internal/boostrap"
 	"github.com/anton-chornobai/beton.git/internal/config"
 	"github.com/anton-chornobai/beton.git/internal/db"
 	"github.com/joho/godotenv"
+	"strconv"
 )
 
 func main() {
