@@ -2,10 +2,25 @@ package domain
 
 import (
 	"errors"
+	"unicode/utf8"
+)
+
+const (
+	MaxTitleLength = 30
+	MinTitleLength = 2
+)
+
+var (
+	ErrInvalidPrice   = errors.New("ціна повинна бути більшою за 0")
+	ErrTitleTooShort  = errors.New("назва повинна містити принаймні 2 символи")
+	ErrTitleTooLong   = errors.New("назва занадто довга (максимум 30 символів)")
+	ErrTypeRequired   = errors.New("тип продукту є обов'язковим")
+	ErrInvalidStatus  = errors.New("недопустимий статус продукту")
+	ErrNegativeStock  = errors.New("кількість на складі не може бути від'ємною")
+	ErrNegativeWeight = errors.New("вага не може бути від'ємною")
 )
 
 type ProductStatus string
-
 
 const (
 	ProductArchived  ProductStatus = "archived"
@@ -69,29 +84,32 @@ func NewProduct(
 	rating *int,
 	size *Size,
 ) (*Product, error) {
-
 	if price <= 0 {
-		return nil, errors.New("price must be greater than 0")
+		return nil, ErrInvalidPrice
 	}
 
-	if len(title) < 2 {
-		return nil, errors.New("title must be at least 2 characters")
+	titleLen := utf8.RuneCountInString(title)
+	if titleLen < MinTitleLength {
+		return nil, ErrTitleTooShort
+	}
+	if titleLen > MaxTitleLength {
+		return nil, ErrTitleTooLong
 	}
 
 	if productType == "" {
-		return nil, errors.New("product type is required")
+		return nil, ErrTypeRequired
 	}
 
-	if status != ProductArchived && status != ProductDisplayed {
-		return nil, errors.New("invalid product status")
+	if !status.IsValid() {
+		return nil, ErrInvalidStatus
 	}
 
 	if stockQuantity != nil && *stockQuantity < 0 {
-		return nil, errors.New("stock quantity cannot be negative")
+		return nil, ErrNegativeStock
 	}
 
 	if weight != nil && *weight < 0 {
-		return nil, errors.New("weight cannot be negative")
+		return nil, ErrNegativeWeight
 	}
 
 	return &Product{
