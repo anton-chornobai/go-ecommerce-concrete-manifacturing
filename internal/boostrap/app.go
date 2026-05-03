@@ -41,7 +41,7 @@ func App(db *sql.DB) http.Handler {
 	GCPUploader := productInfra.NewGCPUploader(NewGCSClient(ctx))
 	//PRODUCTS
 	productRepo := &productInfra.ProductRepository{DB: db}
-	productService, err := productService.NewProductService(productRepo, GCPUploader)
+	productService, err := productService.NewProductService(productRepo, GCPUploader, log)
 	if err != nil {
 		log.Error("failed to create product service", "error", err)
 		panic(err)
