@@ -18,6 +18,7 @@ var (
 	ErrInvalidStatus  = errors.New("недопустимий статус продукту")
 	ErrNegativeStock  = errors.New("кількість на складі не може бути від'ємною")
 	ErrNegativeWeight = errors.New("вага не може бути від'ємною")
+	ErrProductNotFound = errors.New("продукт не знайдено")
 )
 
 type ProductStatus string
@@ -56,19 +57,19 @@ type Product struct {
 	Size          *Size         `json:"size,omitempty"`
 }
 
-type ProductUpdate struct {
-	Price         *int
-	Title         *string
-	ProductType   *string
-	ImageURL      *string
-	Color         *string
-	Status        *ProductStatus
-	Description   *string
-	StockQuantity *int
-	WeightGrams   *int
-	Rating        *int
-	SizeWidth     *int
-	SizeHeight    *int
+type ProductPatch struct {
+    Price         *int
+    Title         *string
+    Type          *string
+    Status        *ProductStatus
+    Color         *string
+    Description   *string
+    StockQuantity *int
+    Weight        *int
+    Rating        *int
+    SizeWidth     *int
+    SizeHeight    *int
+    ImageURL      *string
 }
 
 func NewProduct(
@@ -84,45 +85,89 @@ func NewProduct(
 	rating *int,
 	size *Size,
 ) (*Product, error) {
-	if price <= 0 {
-		return nil, ErrInvalidPrice
-	}
-
-	titleLen := utf8.RuneCountInString(title)
-	if titleLen < MinTitleLength {
-		return nil, ErrTitleTooShort
-	}
-	if titleLen > MaxTitleLength {
-		return nil, ErrTitleTooLong
-	}
-
-	if productType == "" {
-		return nil, ErrTypeRequired
-	}
-
-	if !status.IsValid() {
-		return nil, ErrInvalidStatus
-	}
-
-	if stockQuantity != nil && *stockQuantity < 0 {
-		return nil, ErrNegativeStock
-	}
-
-	if weight != nil && *weight < 0 {
-		return nil, ErrNegativeWeight
-	}
-
-	return &Product{
+	p := &Product{
 		Price:         price,
 		Title:         title,
 		Type:          productType,
-		ImageURL:      imageURL,
-		Status:        status,
 		Color:         color,
+		Status:        status,
+		ImageURL:      imageURL,
 		StockQuantity: stockQuantity,
 		Description:   description,
 		Weight:        weight,
 		Rating:        rating,
 		Size:          size,
-	}, nil
+	}
+
+	if err := p.Validate(); err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (p *Product) Validate() error {
+	if p.Price <= 0 {
+		return ErrInvalidPrice
+	}
+
+	titleLen := utf8.RuneCountInString(p.Title)
+	if titleLen < MinTitleLength {
+		return ErrTitleTooShort
+	}
+	if titleLen > MaxTitleLength {
+		return ErrTitleTooLong
+	}
+
+	if p.Type == "" {
+		return ErrTypeRequired
+	}
+
+	if !p.Status.IsValid() {
+		return ErrInvalidStatus
+	}
+
+	if p.StockQuantity != nil && *p.StockQuantity < 0 {
+		return ErrNegativeStock
+	}
+
+	if p.Weight != nil && *p.Weight < 0 {
+		return ErrNegativeWeight
+	}
+
+	return nil
+}
+
+func (p *ProductPatch) Validate() error {
+    if p.Price != nil && *p.Price <= 0 {
+        return ErrInvalidPrice
+    }
+
+    if p.Title != nil {
+        titleLen := utf8.RuneCountInString(*p.Title)
+        if titleLen < MinTitleLength {
+            return ErrTitleTooShort
+        }
+        if titleLen > MaxTitleLength {
+            return ErrTitleTooLong
+        }
+    }
+
+    if p.Type != nil && *p.Type == "" {
+        return ErrTypeRequired
+    }
+
+    if p.Status != nil && !p.Status.IsValid() {
+        return ErrInvalidStatus
+    }
+
+    if p.StockQuantity != nil && *p.StockQuantity < 0 {
+        return ErrNegativeStock
+    }
+
+    if p.Weight != nil && *p.Weight < 0 {
+        return ErrNegativeWeight
+    }
+
+    return nil
 }

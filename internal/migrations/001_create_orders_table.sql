@@ -25,11 +25,13 @@ CREATE TABLE products (
     color TEXT,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'archived' CHECK (status IN ('archived', 'displayed')), 
-    cd  INTEGER DEFAULT 0 CHECK,
+    stock_quantity INTEGER DEFAULT 0,
     weight_grams INTEGER CHECK (weight_grams >= 0),
     rating SMALLINT CHECK (rating >= 0 AND rating <= 5),
     size_width INTEGER CHECK (size_width >= 0),
     size_height INTEGER CHECK (size_height >= 0)
+    created_at    TIMESTAMP  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMP  NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE orders (

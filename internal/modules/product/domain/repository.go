@@ -9,5 +9,5 @@ type Repository interface {
 	GetByID(ctx context.Context, id int) (*Product, error)
 	Add(ctx context.Context, product *Product) error
 	DeleteByID(ctx context.Context, id int) error
-	Update(ctx context.Context, id int, req ProductUpdate) error
+	Patch(ctx context.Context, id int, req *ProductPatch) error
 }

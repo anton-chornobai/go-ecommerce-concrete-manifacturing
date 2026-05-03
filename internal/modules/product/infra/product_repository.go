@@ -218,35 +218,56 @@ func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 	return &product, nil
 }
 
-func (r *ProductRepository) Update(ctx context.Context, id int, req domain.ProductUpdate) error {
-
+func (r *ProductRepository) Patch(ctx context.Context, id int, p *domain.ProductPatch) error {
 	setParts := []string{}
 	args := []any{}
 	i := 1
 
 	add := func(column string, value any) {
-		if value != nil {
-			setParts = append(setParts, fmt.Sprintf("%s=$%d", column, i))
-			args = append(args, value)
-			i++
-		}
+		setParts = append(setParts, fmt.Sprintf("%s=$%d", column, i))
+		args = append(args, value)
+		i++
 	}
 
-	add("price", req.Price)
-	add("title", req.Title)
-	add("type", req.ProductType)
-	add("image_url", req.ImageURL)
-	add("color", req.Color)
-	add("status", req.Status)
-	add("description", req.Description)
-	add("stock_quantity", req.StockQuantity)
-	add("weight_grams", req.WeightGrams)
-	add("rating", req.Rating)
-	add("size_width", req.SizeWidth)
-	add("size_height", req.SizeHeight)
+	if p.Price != nil {
+		add("price", *p.Price)
+	}
+	if p.Title != nil {
+		add("title", *p.Title)
+	}
+	if p.Type != nil {
+		add("type", *p.Type)
+	}
+	if p.Status != nil {
+		add("status", *p.Status)
+	}
+	if p.ImageURL != nil {
+		add("image_url", *p.ImageURL)
+	}
+	if p.Color != nil {
+		add("color", *p.Color)
+	}
+	if p.Description != nil {
+		add("description", *p.Description)
+	}
+	if p.StockQuantity != nil {
+		add("stock_quantity", *p.StockQuantity)
+	}
+	if p.Weight != nil {
+		add("weight_grams", *p.Weight)
+	}
+	if p.Rating != nil {
+		add("rating", *p.Rating)
+	}
+	if p.SizeWidth != nil {
+		add("size_width", *p.SizeWidth)
+	}
+	if p.SizeHeight != nil {
+		add("size_height", *p.SizeHeight)
+	}
 
 	if len(setParts) == 0 {
-		return fmt.Errorf("no fields to update")
+		return nil
 	}
 
 	query := fmt.Sprintf(
@@ -254,21 +275,19 @@ func (r *ProductRepository) Update(ctx context.Context, id int, req domain.Produ
 		strings.Join(setParts, ", "),
 		i,
 	)
-
 	args = append(args, id)
 
 	res, err := r.DB.ExecContext(ctx, query, args...)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to patch product: %w", err)
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
 		return err
 	}
-
 	if rows == 0 {
-		return fmt.Errorf("product not found")
+		return domain.ErrProductNotFound
 	}
 
 	return nil

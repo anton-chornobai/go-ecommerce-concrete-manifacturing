@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -164,7 +165,71 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
-	//
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+	defer cancel()
+
+	strID := r.PathValue("id")
+	if strID == "" {
+		http.Error(w, "Не вказано id ресурсу", http.StatusBadRequest)
+		return
+	}
+
+	intID, err := strconv.Atoi(strID)
+	if err != nil {
+		http.Error(w, "Неправильне id ресурсу", http.StatusBadRequest)
+		return
+	}
+	if intID <= 0 {
+		http.Error(w, "id має бути більше нуля", http.StatusBadRequest)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytesBodyLimit)
+
+	err = r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			http.Error(w, fmt.Sprintf("Розмір файлу більше %dmb", maxBytesBodyLimit), http.StatusRequestEntityTooLarge)
+		} else {
+			http.Error(w, "Неправильний формат запиту", http.StatusBadRequest)
+		}
+		return
+	}
+	parseForm := new(dto.ProductPatchRequest)
+	if err := decoder.Decode(parseForm, r.PostForm); err != nil {
+		http.Error(w, "Помилка декодування"+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		switch {
+		case errors.Is(err, http.ErrMissingFile):
+			file = nil
+			header = nil
+		case errors.Is(err, multipart.ErrMessageTooLarge):
+			http.Error(w, "файл завеликий", http.StatusRequestEntityTooLarge)
+			return
+		default:
+
+			http.Error(w, "Неправильний запит", http.StatusBadRequest)
+			return
+		}
+	}
+
+	err = h.ProductService.Update(ctx, intID, *parseForm, file, header)
+	if err != nil {
+		http.Error(w, "Щось пішло не так...", http.StatusInternalServerError);
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	
+
+	_ = json.NewEncoder(w).Encode(map[string]string{ 
+		"message": "Продукт з id " + fmt.Sprintf("%d", intID) + " Успішно оновлено ",
+	})
 }
 
 func (h *ProductHandler) DeleteByID(w http.ResponseWriter, r *http.Request) {
