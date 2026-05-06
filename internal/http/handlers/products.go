@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
@@ -20,9 +18,10 @@ import (
 )
 
 const (
-	// To limit body (with file) size in Update and Add
-	maxBytesBodyLimit = 10 << 20
+	maxBytesBodyLimit = 10 << 20 // 10MB
 )
+
+var decoder = schema.NewDecoder()
 
 type ProductHandler struct {
 	ProductService application.ProductService
@@ -33,38 +32,78 @@ func NewProductsHandler(productService application.ProductService, logger *slog.
 	return &ProductHandler{ProductService: productService, logger: logger}
 }
 
+func (h *ProductHandler) handleServiceError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, domain.ErrProductNotFound):
+		h.logger.WarnContext(r.Context(), "Продукт не знайдено",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "handleServiceError")),
+			slog.String("помилка", err.Error()),
+		)
+		http.Error(w, err.Error(), http.StatusNotFound)
+	case errors.Is(err, domain.ErrInvalidPrice),
+		errors.Is(err, domain.ErrTitleTooShort),
+		errors.Is(err, domain.ErrTitleTooLong),
+		errors.Is(err, domain.ErrTypeRequired),
+		errors.Is(err, domain.ErrInvalidStatus),
+		errors.Is(err, domain.ErrNegativeStock),
+		errors.Is(err, domain.ErrNegativeWeight):
+		// Warn because this is client's fault — they sent invalid data
+		h.logger.WarnContext(r.Context(), "Невалідні дані від клієнта",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "handleServiceError")),
+			slog.String("помилка", err.Error()),
+		)
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	default:
+		// Error because something in our infrastructure broke unexpectedly
+		h.logger.ErrorContext(r.Context(), "Внутрішня помилка сервісу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "handleServiceError")),
+			slog.String("шлях", r.URL.Path),
+			slog.String("метод", r.Method),
+			slog.String("помилка", err.Error()),
+		)
+		http.Error(w, "Щось пішло не так", http.StatusInternalServerError)
+	}
+}
+
 func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	// Info because this is a normal operation entry point
+	h.logger.InfoContext(ctx, "Запит на отримання списку продуктів",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
+	)
+
 	var status *domain.ProductStatus
-
-	queryParams := r.URL.Query()
-	statusVal := queryParams.Get("status")
-
-	if statusVal == "" ||
-		(statusVal != string(domain.ProductArchived) &&
-			statusVal != string(domain.ProductDisplayed)) {
-		status = nil
-	} else {
+	statusVal := r.URL.Query().Get("status")
+	if statusVal == string(domain.ProductArchived) || statusVal == string(domain.ProductDisplayed) {
 		s := domain.ProductStatus(statusVal)
 		status = &s
 	}
 
 	products, err := h.ProductService.GetProducts(ctx, 20, status)
-
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// Error because db/infra failed — not client's fault
+		h.logger.ErrorContext(ctx, "Не вдалося отримати список продуктів",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
+			slog.String("помилка", err.Error()),
+		)
+		http.Error(w, "Щось пішло не так", http.StatusInternalServerError)
 		return
 	}
 
+	h.logger.InfoContext(ctx, "Список продуктів успішно отримано",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
+		slog.Int("кількість", len(products)),
+	)
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string][]domain.Product{
-		"data": products,
-	}); err != nil {
-		http.Error(w, "couldnt send data", http.StatusInternalServerError)
-		return
+	if err := json.NewEncoder(w).Encode(map[string][]domain.Product{"data": products}); err != nil {
+		// Error because our response writer failed — infrastructure problem
+		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
+			slog.String("помилка", err.Error()),
+		)
 	}
 }
 
@@ -72,95 +111,120 @@ func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 3 {
-		http.Error(w, "invalid path", http.StatusBadRequest)
+	strID := r.PathValue("id")
+	if strID == "" {
+		// Warn because client forgot to pass id — their mistake
+		h.logger.WarnContext(ctx, "Не вказано id ресурсу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProductByID")),
+		)
+		http.Error(w, "Не вказано id ресурсу", http.StatusBadRequest)
 		return
 	}
 
-	idStr := pathParts[3]
-	fmt.Println(idStr)
+	id, err := strconv.Atoi(strID)
+	if err != nil || id <= 0 {
+		// Warn because client sent non-numeric or negative id — their mistake
+		h.logger.WarnContext(ctx, "Невалідний id ресурсу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProductByID")),
+			slog.String("отримано", strID),
+		)
+		http.Error(w, "id має бути цілим додатнім числом", http.StatusBadRequest)
+		return
+	}
 
-	ingtegerID, err := strconv.Atoi(idStr)
+	h.logger.InfoContext(ctx, "Запит на отримання продукту",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProductByID")),
+		slog.Int("id", id),
+	)
+
+	product, err := h.ProductService.GetById(ctx, id)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		h.handleServiceError(w, r, err)
 		return
 	}
 
-	product, err := h.ProductService.GetById(ctx, ingtegerID)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "no such product", http.StatusBadRequest)
-			return
-		}
-		fmt.Println(err)
-		http.Error(w, "something went wrong", http.StatusInternalServerError)
-		return
-	}
+	h.logger.InfoContext(ctx, "Продукт успішно отримано",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProductByID")),
+		slog.Int("id", id),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	if err := json.NewEncoder(w).Encode(map[string]any{
-		"data": product,
-	}); err != nil {
-		http.Error(w, "couldnt encode response", http.StatusInternalServerError)
-		return
-
+	if err := json.NewEncoder(w).Encode(map[string]any{"data": product}); err != nil {
+		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProductByID")),
+			slog.Int("id", id),
+			slog.String("помилка", err.Error()),
+		)
 	}
 }
-
-var decoder = schema.NewDecoder()
 
 func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 	defer cancel()
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxBytesBodyLimit)
+	h.logger.InfoContext(ctx, "Запит на створення продукту",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+	)
 
-	err := r.ParseMultipartForm(10 << 20)
-	if err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytesBodyLimit)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			http.Error(w, fmt.Sprintf("Тіло запиту занадто велике (більше %v)", maxBytesBodyLimit), http.StatusRequestEntityTooLarge)
-			return
+			h.logger.WarnContext(ctx, "Тіло запиту занадто велике",
+				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+				slog.Int64("ліміт_байт", maxBytesErr.Limit),
+			)
+			http.Error(w, fmt.Sprintf("Тіло запиту занадто велике (максимум %dmb)", maxBytesBodyLimit>>20), http.StatusRequestEntityTooLarge)
+		} else {
+			h.logger.WarnContext(ctx, "Неправильний формат тіла запиту",
+				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+				slog.String("помилка", err.Error()),
+			)
+			http.Error(w, "Неправильний формат запиту", http.StatusBadRequest)
 		}
+		return
 	}
-	parsedForm := new(dto.ProductPostRequest)
 
+	parsedForm := new(dto.ProductPostRequest)
 	if err := decoder.Decode(parsedForm, r.PostForm); err != nil {
-		http.Error(w, "Помилка декодування"+err.Error(), http.StatusBadRequest)
+		h.logger.WarnContext(ctx, "Помилка декодування форми",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+			slog.String("помилка", err.Error()),
+		)
+		http.Error(w, "Помилка декодування: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	file, header, err := r.FormFile("file")
-	if err != nil {
-		if err != http.ErrMissingFile {
-			http.Error(w, "Помилка отримання файлу", http.StatusBadRequest)
-			return
-		}
-
-		file = nil
-		header = nil
-	} else {
+	if err != nil && !errors.Is(err, http.ErrMissingFile) {
+		h.logger.WarnContext(ctx, "Помилка отримання файлу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+			slog.String("помилка", err.Error()),
+		)
+		http.Error(w, "Помилка отримання файлу", http.StatusBadRequest)
+		return
+	}
+	if file != nil {
 		defer file.Close()
 	}
 
 	if err := h.ProductService.Add(ctx, parsedForm, file, header); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.handleServiceError(w, r, err)
 		return
 	}
 
+	h.logger.InfoContext(ctx, "Продукт успішно створено",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+		slog.String("назва", parsedForm.Title),
+	)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-
-	err = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Продукт створений",
-	})
-
-	if err != nil {
-		h.logger.Warn("ProductHandler.Add Failed to encode JSON response", "err:", err.Error())
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": "Продукт створений"}); err != nil {
+		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь після створення",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+			slog.String("помилка", err.Error()),
+		)
 	}
 }
 
@@ -170,35 +234,57 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	strID := r.PathValue("id")
 	if strID == "" {
+		h.logger.WarnContext(ctx, "Не вказано id ресурсу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+		)
 		http.Error(w, "Не вказано id ресурсу", http.StatusBadRequest)
 		return
 	}
 
 	intID, err := strconv.Atoi(strID)
-	if err != nil {
-		http.Error(w, "Неправильне id ресурсу", http.StatusBadRequest)
+	if err != nil || intID <= 0 {
+		h.logger.WarnContext(ctx, "Невалідний id ресурсу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+			slog.String("отримано", strID),
+		)
+		http.Error(w, "id має бути цілим додатнім числом", http.StatusBadRequest)
 		return
 	}
-	if intID <= 0 {
-		http.Error(w, "id має бути більше нуля", http.StatusBadRequest)
-		return
-	}
+
+	h.logger.InfoContext(ctx, "Запит на оновлення продукту",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+		slog.Int("id", intID),
+	)
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytesBodyLimit)
-
-	err = r.ParseMultipartForm(32 << 20)
-	if err != nil {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			http.Error(w, fmt.Sprintf("Розмір файлу більше %dmb", maxBytesBodyLimit), http.StatusRequestEntityTooLarge)
+			h.logger.WarnContext(ctx, "Тіло запиту занадто велике при оновленні",
+				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+				slog.Int("id", intID),
+				slog.Int64("ліміт_байт", maxBytesErr.Limit),
+			)
+			http.Error(w, fmt.Sprintf("Тіло запиту занадто велике (максимум %dmb)", maxBytesBodyLimit>>20), http.StatusRequestEntityTooLarge)
 		} else {
+			h.logger.WarnContext(ctx, "Неправильний формат тіла запиту при оновленні",
+				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+				slog.Int("id", intID),
+				slog.String("помилка", err.Error()),
+			)
 			http.Error(w, "Неправильний формат запиту", http.StatusBadRequest)
 		}
 		return
 	}
+
 	parseForm := new(dto.ProductPatchRequest)
 	if err := decoder.Decode(parseForm, r.PostForm); err != nil {
-		http.Error(w, "Помилка декодування"+err.Error(), http.StatusBadRequest)
+		h.logger.WarnContext(ctx, "Помилка декодування форми оновлення",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+			slog.Int("id", intID),
+			slog.String("помилка", err.Error()),
+		)
+		http.Error(w, "Помилка декодування: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -209,47 +295,94 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 			file = nil
 			header = nil
 		case errors.Is(err, multipart.ErrMessageTooLarge):
-			http.Error(w, "файл завеликий", http.StatusRequestEntityTooLarge)
+			h.logger.WarnContext(ctx, "Файл завеликий при оновленні",
+				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+				slog.Int("id", intID),
+			)
+			http.Error(w, "Файл завеликий", http.StatusRequestEntityTooLarge)
 			return
 		default:
-
+			h.logger.WarnContext(ctx, "Помилка отримання файлу при оновленні",
+				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+				slog.Int("id", intID),
+				slog.String("помилка", err.Error()),
+			)
 			http.Error(w, "Неправильний запит", http.StatusBadRequest)
 			return
 		}
 	}
+	if file != nil {
+		defer file.Close()
+	}
 
-	err = h.ProductService.Update(ctx, intID, *parseForm, file, header)
-	if err != nil {
-		http.Error(w, "Щось пішло не так...", http.StatusInternalServerError);
+	if err := h.ProductService.Update(ctx, intID, *parseForm, file, header); err != nil {
+		h.handleServiceError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	
 
-	_ = json.NewEncoder(w).Encode(map[string]string{ 
-		"message": "Продукт з id " + fmt.Sprintf("%d", intID) + " Успішно оновлено ",
-	})
+	h.logger.InfoContext(ctx, "Продукт успішно оновлено",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+		slog.Int("id", intID),
+	)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Продукт з id %d успішно оновлено", intID),
+	}); err != nil {
+		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь після оновлення",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Update")),
+			slog.Int("id", intID),
+			slog.String("помилка", err.Error()),
+		)
+	}
 }
 
 func (h *ProductHandler) DeleteByID(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	idStr := strings.Split(r.URL.Path, "/")
-	id, err := strconv.Atoi(idStr[len(idStr)-1])
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+	strID := r.PathValue("id")
+	if strID == "" {
+		h.logger.WarnContext(ctx, "Не вказано id ресурсу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "DeleteByID")),
+		)
+		http.Error(w, "Не вказано id ресурсу", http.StatusBadRequest)
 		return
 	}
+
+	id, err := strconv.Atoi(strID)
+	if err != nil || id <= 0 {
+		h.logger.WarnContext(ctx, "Невалідний id ресурсу",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "DeleteByID")),
+			slog.String("отримано", strID),
+		)
+		http.Error(w, "id має бути цілим додатнім числом", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.InfoContext(ctx, "Запит на видалення продукту",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "DeleteByID")),
+		slog.Int("id", id),
+	)
 
 	if err := h.ProductService.DeleteByID(ctx, id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.handleServiceError(w, r, err)
 		return
 	}
 
+	h.logger.InfoContext(ctx, "Продукт успішно видалено",
+		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "DeleteByID")),
+		slog.Int("id", id),
+	)
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "deleted",
-	})
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Продукт з id %d успішно видалено", id),
+	}); err != nil {
+		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь після видалення",
+			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "DeleteByID")),
+			slog.Int("id", id),
+			slog.String("помилка", err.Error()),
+		)
+	}
 }
