@@ -8,6 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	ErrUserNotFound     = errors.New("користувача не знайдено")
+	ErrUnauthorized  = errors.New("недостатньо прав")
+)
+
 const phoneNumberLength = 9
 
 type User struct {

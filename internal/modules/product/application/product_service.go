@@ -9,12 +9,11 @@ import (
 
 	"mime/multipart"
 	"time"
-
-	"os"
 	"strings"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
+	"github.com/google/uuid"
 )
 
 type ProductService struct {
@@ -62,29 +61,30 @@ func (p *ProductService) GetById(ctx context.Context, id int) (*domain.Product, 
 func (p *ProductService) Add(
 	ctx context.Context,
 	input *dto.ProductPostRequest,
-	file multipart.File,
-	header *multipart.FileHeader,
+	headers []*multipart.FileHeader,
 ) error {
 	if input == nil {
 		p.logger.ErrorContext(ctx, "Вхідні дані відсутні")
 		return errors.New("input data is required")
 	}
 
-	var imageURL *string
-	if file != nil && header != nil {
-		filename := fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename)
-		url, err := p.imageStorage.Upload(ctx, file, filename)
-		if err != nil {
-			p.logger.ErrorContext(ctx, "Не вдалося завантажити зображення",
-				slog.String("файл", filename),
-				slog.String("помилка", err.Error()),
-			)
-			return fmt.Errorf("upload failed: %w", err)
-		}
-		p.logger.InfoContext(ctx, "Зображення завантажено",
-			slog.String("url", url),
+	uploadedURLs, err := p.imageStorage.UploadMultipleFiles(ctx, headers)
+	if err != nil {
+		p.logger.ErrorContext(ctx, "Не вдалося завантажити зображення",
+			slog.Group("source", slog.String("layer", "service"), slog.String("func", "Add")),
+			slog.String("помилка", err.Error()),
 		)
-		imageURL = &url
+		return fmt.Errorf("upload failed: %w", err)
+	}
+
+	//converting from string to ProductImage struct
+	images := make([]domain.ProductImage, len(uploadedURLs))
+	for i, url := range uploadedURLs {
+		images[i] = domain.ProductImage{
+			ID:       uuid.New(),
+			Position: i,
+			URL:      url,
+		}
 	}
 
 	var size *domain.Size
@@ -101,7 +101,7 @@ func (p *ProductService) Add(
 		input.Type,
 		input.Color,
 		input.Status,
-		imageURL,
+		images,
 		input.StockQuantity,
 		input.Description,
 		input.Weight,
@@ -134,34 +134,37 @@ func (p *ProductService) DeleteByID(ctx context.Context, id int) error {
 	product, err := p.repo.GetByID(ctx, id)
 	if err != nil {
 		p.logger.ErrorContext(ctx, "Не вдалося знайти продукт для видалення",
-			slog.Int("id", id),
-			slog.String("помилка", err.Error()),
-		)
-		return fmt.Errorf("failed to get product form db %w", err)
-	}
-
-	if err := p.repo.DeleteByID(ctx, id); err != nil {
-		p.logger.ErrorContext(ctx, "Не вдалося видалити продукт з бази даних",
+			slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
 			slog.Int("id", id),
 			slog.String("помилка", err.Error()),
 		)
 		return err
 	}
 
-	if product.ImageURL != nil {
-		filePath := strings.TrimPrefix(*product.ImageURL, "/")
-		if err := os.Remove(filePath); err != nil && errors.Is(err, os.ErrNotExist) {
-			p.logger.ErrorContext(ctx, "Не вдалося видалити зображення продукту",
-				slog.Int("id", id),
-				slog.String("шлях", filePath),
+	if err := p.repo.DeleteByID(ctx, id); err != nil {
+		p.logger.ErrorContext(ctx, "Не вдалося видалити продукт з бази даних",
+			slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
+			slog.Int("id", id),
+			slog.String("помилка", err.Error()),
+		)
+		return err
+	}
+
+	for _, image := range product.ImageURLs {
+		if err := p.imageStorage.Delete(ctx, image.URL); err != nil {
+			p.logger.WarnContext(ctx, "Не вдалося видалити зображення з GCS",
+				slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
+				slog.Int("product_id", id),
+				slog.String("url", image.URL),
 				slog.String("помилка", err.Error()),
 			)
-			return fmt.Errorf("could not delete image: %w", err)
 		}
 	}
 
 	p.logger.InfoContext(ctx, "Продукт успішно видалено",
+		slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
 		slog.Int("id", id),
+		slog.Int("видалено_зображень", len(product.ImageURLs)),
 	)
 	return nil
 }

@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 )
@@ -53,7 +55,11 @@ func AdminOnly(userService *application.UserService, next http.Handler) http.Han
 		isAdmin, err := userService.IsAdmin(id)
 
 		if err != nil {
-			http.Error(w, "something went wrong", http.StatusInternalServerError)
+			if errors.Is(err, domain.ErrUnauthorized) {
+				http.Error(w, "недостатньо прав", http.StatusInternalServerError)
+			return
+			}
+			http.Error(w, "щось пішло не так" + err.Error(), http.StatusInternalServerError)
 			return
 		}
 

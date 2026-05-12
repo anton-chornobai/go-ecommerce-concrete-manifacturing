@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"strings"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type ProductRepository struct {
@@ -16,7 +19,6 @@ type ProductRepository struct {
 }
 
 func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) error {
-	var id int
 	var sizeWidth *int
 	var sizeHeight *int
 
@@ -25,21 +27,20 @@ func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) er
 		sizeHeight = &product.Size.Height
 	}
 
+	var productID int
 	err := p.DB.QueryRowContext(ctx, `
 		INSERT INTO products (
-			price, title, type, status, image_url, color,
+			price, title, type, status, color,
 			description, stock_quantity, weight_grams, rating,
 			size_width, size_height
 		) VALUES (
 			$1, $2, $3, $4, $5, $6,
-			$7, $8, $9, $10,
-			$11, $12
-		) RETURNING id;`,
+			$7, $8, $9, $10, $11
+		) RETURNING id`,
 		product.Price,
 		product.Title,
 		product.Type,
 		product.Status,
-		product.ImageURL,
 		product.Color,
 		product.Description,
 		product.StockQuantity,
@@ -47,39 +48,53 @@ func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) er
 		product.Rating,
 		sizeWidth,
 		sizeHeight,
-	).Scan(&id)
-
+	).Scan(&productID)
 	if err != nil {
-		return fmt.Errorf("couldn't add new product: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.ErrTitleAlreadyExists
+		}
+		return fmt.Errorf("не вдалося додати продукт: %w", err)
 	}
+
+	for i, image := range product.ImageURLs {
+		_, err := p.DB.ExecContext(ctx, `
+			INSERT INTO product_image (id, product_id, url, position)
+			VALUES ($1, $2, $3, $4)`,
+			image.ID,
+			productID,
+			image.URL,
+			i,
+		)
+		if err != nil {
+			return fmt.Errorf("не вдалося зберегти зображення %s: %w", image.URL, err)
+		}
+	}
+
 	return nil
 }
 func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
-	var products []domain.Product
-	query := `SELECT 
-		id,
-		price,
-		title,
-		type,
-		image_url,
-		color,
-		description,
-		status,
-		stock_quantity,
-		weight_grams,
-		rating,
-		size_width,
-		size_height
-	 FROM products
-	`
+	query := `
+		SELECT
+			p.id, p.price, p.title, p.type, p.status,
+			p.color, p.description, p.stock_quantity,
+			p.weight_grams, p.rating, p.size_width, p.size_height,
+			p.created_at, p.updated_at,
+			pi.id, pi.url, pi.position, pi.created_at
+		FROM products p
+		LEFT JOIN product_image pi ON pi.product_id = p.id`
 
 	args := []any{}
 	argPos := 1
+
 	if status != nil {
-		query += fmt.Sprintf(" WHERE status=$%d", argPos)
+		query += fmt.Sprintf(" WHERE p.status=$%d", argPos)
 		args = append(args, *status)
 		argPos++
 	}
+
+	query += " ORDER BY p.id, pi.position"
+
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT $%d", argPos)
 		args = append(args, limit)
@@ -88,73 +103,81 @@ func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *
 
 	rows, err := p.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute query: %w", err)
+		return nil, fmt.Errorf("не вдалося виконати запит: %w", err)
 	}
 	defer rows.Close()
 
+	productMap := map[int]*domain.Product{}
+	productOrder := []int{}
+
 	for rows.Next() {
-		var product domain.Product
 		var (
-			width, height                 sql.NullInt64
-			stockQuantity, weight, rating sql.NullInt64
-			imageURL, color, description  sql.NullString
+			sizeWidth, sizeHeight          *int
+			imageID                        *uuid.UUID
+			imageURL                       *string
+			imagePosition                  *int
+			imageCreatedAt                 *time.Time
 		)
 
-		err = rows.Scan(
-			&product.ID,
-			&product.Price,
-			&product.Title,
-			&product.Type,
+		// temp product to scan into each row
+		var row domain.Product
+
+		err := rows.Scan(
+			&row.ID,
+			&row.Price,
+			&row.Title,
+			&row.Type,
+			&row.Status,
+			&row.Color,
+			&row.Description,
+			&row.StockQuantity,
+			&row.Weight,
+			&row.Rating,
+			&sizeWidth,
+			&sizeHeight,
+			&row.CreatedAt,
+			&row.UpdatedAt,
+			&imageID,
 			&imageURL,
-			&color,
-			&description,
-			&product.Status,
-			&stockQuantity,
-			&weight,
-			&rating,
-			&width,
-			&height,
+			&imagePosition,
+			&imageCreatedAt,
 		)
-		fmt.Println("DB IMAGE RAW:", imageURL.Valid, imageURL.String)
 		if err != nil {
-			return nil, fmt.Errorf("fail scanning product from DB: %w", err)
+			return nil, fmt.Errorf("не вдалося зчитати рядок: %w", err)
 		}
 
-		if imageURL.Valid {
-			product.ImageURL = &imageURL.String
-		}
-		if color.Valid {
-			product.Color = &color.String
-		}
-		if description.Valid {
-			product.Description = &description.String
-		}
-
-		if stockQuantity.Valid {
-			v := int(stockQuantity.Int64)
-			product.StockQuantity = &v
-		}
-		if weight.Valid {
-			v := int(weight.Int64)
-			product.Weight = &v
-		}
-		if rating.Valid {
-			v := int(rating.Int64)
-			product.Rating = &v
-		}
-
-		if width.Valid && height.Valid {
-			product.Size = &domain.Size{
-				Width:  int(width.Int64),
-				Height: int(height.Int64),
+		// first time seeing this product id — add to map
+		if _, exists := productMap[row.ID]; !exists {
+			if sizeWidth != nil && sizeHeight != nil {
+				row.Size = &domain.Size{
+					Width:  *sizeWidth,
+					Height: *sizeHeight,
+				}
 			}
+			productMap[row.ID] = &row
+			productOrder = append(productOrder, row.ID)
 		}
 
-		products = append(products, product)
+		// append image if this row has one
+		if imageID != nil {
+			productMap[row.ID].ImageURLs = append(productMap[row.ID].ImageURLs, domain.ProductImage{
+				ID:        *imageID,
+				ProductID: row.ID,
+				URL:       *imageURL,
+				Position:  *imagePosition,
+				CreatedAt: *imageCreatedAt,
+			})
+		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration: %w", err)
+		return nil, fmt.Errorf("помилка ітерації рядків: %w", err)
+	}
+
+	// preserve order using the slice
+	products := make([]domain.Product, 0, len(productOrder))
+	for _, id := range productOrder {
+		products = append(products, *productMap[id])
 	}
 
 	return products, nil
@@ -188,7 +211,7 @@ func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 		&product.Price,
 		&product.Title,
 		&product.Type,
-		&product.ImageURL,
+		&product.ImageURLs,
 		&product.Color,
 		&product.Description,
 		&product.Status,

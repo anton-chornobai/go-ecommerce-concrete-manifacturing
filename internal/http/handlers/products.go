@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
+	"github.com/gorilla/schema"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
-	"github.com/gorilla/schema"
 )
 
 const (
@@ -40,6 +39,9 @@ func (h *ProductHandler) handleServiceError(w http.ResponseWriter, r *http.Reque
 			slog.String("помилка", err.Error()),
 		)
 		http.Error(w, err.Error(), http.StatusNotFound)
+	case  errors.Is(err, domain.ErrTitleAlreadyExists):
+		http.Error(w, "назва продукту уже існує", http.StatusInternalServerError)
+
 	case errors.Is(err, domain.ErrInvalidPrice),
 		errors.Is(err, domain.ErrTitleTooShort),
 		errors.Is(err, domain.ErrTitleTooLong),
@@ -47,14 +49,12 @@ func (h *ProductHandler) handleServiceError(w http.ResponseWriter, r *http.Reque
 		errors.Is(err, domain.ErrInvalidStatus),
 		errors.Is(err, domain.ErrNegativeStock),
 		errors.Is(err, domain.ErrNegativeWeight):
-		// Warn because this is client's fault — they sent invalid data
 		h.logger.WarnContext(r.Context(), "Невалідні дані від клієнта",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "handleServiceError")),
 			slog.String("помилка", err.Error()),
 		)
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 	default:
-		// Error because something in our infrastructure broke unexpectedly
 		h.logger.ErrorContext(r.Context(), "Внутрішня помилка сервісу",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "handleServiceError")),
 			slog.String("шлях", r.URL.Path),
@@ -69,7 +69,6 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	// Info because this is a normal operation entry point
 	h.logger.InfoContext(ctx, "Запит на отримання списку продуктів",
 		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
 	)
@@ -83,7 +82,6 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	products, err := h.ProductService.GetProducts(ctx, 20, status)
 	if err != nil {
-		// Error because db/infra failed — not client's fault
 		h.logger.ErrorContext(ctx, "Не вдалося отримати список продуктів",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
 			slog.String("помилка", err.Error()),
@@ -99,7 +97,6 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string][]domain.Product{"data": products}); err != nil {
-		// Error because our response writer failed — infrastructure problem
 		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
 			slog.String("помилка", err.Error()),
@@ -113,7 +110,6 @@ func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) 
 
 	strID := r.PathValue("id")
 	if strID == "" {
-		// Warn because client forgot to pass id — their mistake
 		h.logger.WarnContext(ctx, "Не вказано id ресурсу",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProductByID")),
 		)
@@ -123,7 +119,6 @@ func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) 
 
 	id, err := strconv.Atoi(strID)
 	if err != nil || id <= 0 {
-		// Warn because client sent non-numeric or negative id — their mistake
 		h.logger.WarnContext(ctx, "Невалідний id ресурсу",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProductByID")),
 			slog.String("отримано", strID),
@@ -162,11 +157,8 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 	defer cancel()
 
-	h.logger.InfoContext(ctx, "Запит на створення продукту",
-		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
-	)
-
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytesBodyLimit)
+
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
@@ -195,20 +187,14 @@ func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, header, err := r.FormFile("file")
-	if err != nil && !errors.Is(err, http.ErrMissingFile) {
-		h.logger.WarnContext(ctx, "Помилка отримання файлу",
-			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
-			slog.String("помилка", err.Error()),
-		)
-		http.Error(w, "Помилка отримання файлу", http.StatusBadRequest)
+	files := r.MultipartForm.File["attachments"]
+	fmt.Println(len(files))
+	if len(files) < 1 {
+		http.Error(w, "Потрібно мінімум одне фото для продукту щоб його створити", http.StatusBadRequest)
 		return
 	}
-	if file != nil {
-		defer file.Close()
-	}
 
-	if err := h.ProductService.Add(ctx, parsedForm, file, header); err != nil {
+	if err := h.ProductService.Add(ctx, parsedForm, files); err != nil {
 		h.handleServiceError(w, r, err)
 		return
 	}

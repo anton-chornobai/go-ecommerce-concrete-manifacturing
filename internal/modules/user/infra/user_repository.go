@@ -224,14 +224,15 @@ func (r *UserRepository) GetByID(id string) (*domain.User, error) {
 
 func (r *UserRepository) IsAdmin(id string) (bool, error) {
 	var isAdmin bool
-	err := r.DB.QueryRow(`SELECT role = 'admin' FROM users WHERE id=$1`, id).Scan(&isAdmin)
+	err := r.DB.QueryRow(
+		`SELECT role = 'admin' FROM users WHERE id = $1`, id,
+	).Scan(&isAdmin)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, fmt.Errorf("user not found")
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, domain.ErrUserNotFound
 		}
-
-		return false, fmt.Errorf("db error: %w", err)
+		return false, fmt.Errorf("не вдалося перевірити роль користувача: %w", err)
 	}
 
 	return isAdmin, nil
