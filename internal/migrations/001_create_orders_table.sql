@@ -21,7 +21,6 @@ CREATE TABLE products (
     price INTEGER NOT NULL DEFAULT 0 CHECK (price >= 0),
     title VARCHAR(50) NOT NULL UNIQUE,
     type TEXT NOT NULL,
-    image_url TEXT,
     color TEXT,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'archived' CHECK (status IN ('archived', 'displayed')), 
@@ -29,9 +28,17 @@ CREATE TABLE products (
     weight_grams INTEGER CHECK (weight_grams >= 0),
     rating SMALLINT CHECK (rating >= 0 AND rating <= 5),
     size_width INTEGER CHECK (size_width >= 0),
-    size_height INTEGER CHECK (size_height >= 0)
+    size_height INTEGER CHECK (size_height >= 0),
     created_at    TIMESTAMP  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMP  NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE product_image (
+    id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    url        TEXT NOT NULL,
+    position   SMALLINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE orders (
@@ -90,7 +97,9 @@ ON user_contacts (number, created_at);
 -- +goose Down
 
 DROP TABLE IF EXISTS order_item;
+DROP TABLE IF EXISTS product_image;
 DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS order_item;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_contacts;
