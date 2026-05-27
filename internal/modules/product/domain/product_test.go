@@ -214,3 +214,85 @@ func generateRandomTitle() string {
 	}
 	return string(b)
 }
+
+func TestProductPatch_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		patch   ProductPatch
+		wantErr bool
+		expectedErr error
+	}{
+		{
+			name:    "Empty patch (all nil) is valid",
+			patch:   ProductPatch{},
+			wantErr: false,
+		},
+		{
+			name: "Valid values are accepted",
+			patch: ProductPatch{
+				Price:         new(150),
+				Title:         new("Valid Title"),
+				Type:          new("tile"),
+				StockQuantity: new(5),
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid price triggers error",
+			patch: ProductPatch{
+				Price: new(-50),
+			},
+			wantErr:     true,
+			expectedErr: ErrInvalidPrice,
+		},
+		{
+			name: "Title too short triggers error",
+			patch: ProductPatch{
+				Title: new("A"),
+			},
+			wantErr:     true,
+			expectedErr: ErrTitleTooShort,
+		},
+		{
+			name: "Empty product type triggers error",
+			patch: ProductPatch{
+				Type: new(""),
+			},
+			wantErr:     true,
+			expectedErr: ErrTypeRequired,
+		},
+		{
+			name: "Negative stock triggers error",
+			patch: ProductPatch{
+				StockQuantity: new(-1),
+			},
+			wantErr:     true,
+			expectedErr: ErrNegativeStock,
+		},
+		{
+			name: "Negative flat size dimensions trigger errors",
+			patch: ProductPatch{
+				SizeWidth:  new(-5),
+				SizeHeight: new(10),
+			},
+			wantErr:     true,
+			expectedErr: ErrNegativeWidth,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.patch.Validate()
+			
+			if tt.wantErr {
+				if !errors.Is(err, tt.expectedErr) {
+					t.Errorf("got error %v, want %v", err, tt.expectedErr)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
+			}
+		})
+	}
+}
