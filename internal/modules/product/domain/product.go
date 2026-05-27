@@ -23,6 +23,8 @@ var (
 	ErrNegativeWeight     = errors.New("вага не може бути від'ємною")
 	ErrProductNotFound    = errors.New("продукт не знайдено")
 	ErrTitleAlreadyExists = errors.New("назва продукту вже існує")
+	ErrNegativeWidth      = errors.New("ширина не може бути від'ємною")
+	ErrNegativeHeight     = errors.New("висота не може бути від'ємною")
 )
 
 type ProductStatus string
@@ -41,11 +43,6 @@ func (s ProductStatus) IsValid() bool {
 	}
 }
 
-type Size struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
-}
-
 type Product struct {
 	ID            int            `json:"id"`
 	Price         int            `json:"price"`
@@ -59,8 +56,8 @@ type Product struct {
 	Weight        *int           `json:"weight,omitempty"`
 	Rating        *int           `json:"rating,omitempty"`
 	Size          *Size          `json:"size,omitempty"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	CreatedAt     time.Time      `json:"created_at,omitempty"`
+	UpdatedAt     time.Time      `json:"updated_at,omitempty"`
 }
 
 type ProductImage struct {
@@ -69,6 +66,10 @@ type ProductImage struct {
 	Position  int       `json:"position"`
 	URL       string    `json:"url"`
 	CreatedAt time.Time `json:"created_at"`
+}
+type Size struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
 }
 
 type ProductPatch struct {
@@ -149,6 +150,15 @@ func (p *Product) Validate() error {
 		return ErrNegativeWeight
 	}
 
+	if p.Size != nil {
+		if p.Size.Width < 0 {
+			return ErrNegativeWidth
+		}
+		if p.Size.Height < 0 {
+			return ErrNegativeHeight
+		}
+	}
+
 	return nil
 }
 
@@ -181,6 +191,13 @@ func (p *ProductPatch) Validate() error {
 
 	if p.Weight != nil && *p.Weight < 0 {
 		return ErrNegativeWeight
+	}
+
+	if p.SizeWidth != nil && *p.SizeWidth < 0 {
+		return ErrNegativeWidth
+	}
+	if p.SizeHeight != nil && *p.SizeHeight < 0 {
+		return ErrNegativeHeight
 	}
 
 	return nil
