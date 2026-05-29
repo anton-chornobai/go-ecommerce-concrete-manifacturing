@@ -48,7 +48,9 @@ func (h *ProductHandler) handleServiceError(w http.ResponseWriter, r *http.Reque
 		errors.Is(err, domain.ErrTypeRequired),
 		errors.Is(err, domain.ErrInvalidStatus),
 		errors.Is(err, domain.ErrNegativeStock),
-		errors.Is(err, domain.ErrNegativeWeight):
+		errors.Is(err, domain.ErrNegativeWeight),
+		errors.Is(err, domain.ErrNegativeHeight),
+		errors.Is(err, domain.ErrNegativeWidth):
 		h.logger.WarnContext(r.Context(), "Невалідні дані від клієнта",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "handleServiceError")),
 			slog.String("помилка", err.Error()),
