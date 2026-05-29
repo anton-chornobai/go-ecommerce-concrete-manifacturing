@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/anton-chornobai/beton.git/internal/http/middleware"
+	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
 )
@@ -74,7 +74,7 @@ func (o *OrdersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var order domain.Order
 	//passing the user id from a middleware which get it from the token
-	issuerId, ok := r.Context().Value(middleware.UserIDKey).(string)
+	issuerId, ok := r.Context().Value(userMiddleware.UserIDKey).(string)
 
 	if !ok || issuerId == "" {
 		fmt.Println(issuerId)

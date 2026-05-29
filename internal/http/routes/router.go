@@ -8,6 +8,7 @@ import (
 	"github.com/anton-chornobai/beton.git/internal/http/handlers"
 	user_handler "github.com/anton-chornobai/beton.git/internal/http/handlers/user"
 
+	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
 	"github.com/anton-chornobai/beton.git/internal/http/middleware"
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
@@ -44,14 +45,14 @@ func SetUpRoutes(
 	//PROFILE
 	router.HandleFunc("GET /profile", userHandler.GetByID)
 	//ORDERS
-	router.HandleFunc("POST /v1/orders", middleware.GetUsersID(http.HandlerFunc(orderHandler.Create)))
+	router.HandleFunc("POST /v1/orders", userMiddleware.GetUsersID(http.HandlerFunc(orderHandler.Create)))
 	router.HandleFunc("GET /v1/orders", orderHandler.Get)
-	router.Handle("DELETE /v1/orders/{id}", middleware.AdminOnly(userService, http.HandlerFunc(orderHandler.Delete)))
+	router.Handle("DELETE /v1/orders/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(orderHandler.Delete)))
 	//PRODUCTS
 	router.Handle("GET /v1/products", http.HandlerFunc(productHandler.GetProducts))
-	router.Handle("POST /v1/products", middleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
+	router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
-	router.Handle("DELETE /v1/products/{id}", middleware.AdminOnly(userService, http.HandlerFunc(productHandler.DeleteByID)))
+	router.Handle("DELETE /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.DeleteByID)))
 	router.Handle("PATCH /v1/products/{id}", http.HandlerFunc(productHandler.Update))
 	//CONTACTS
 	router.HandleFunc("POST /contacts", userContactHandler.Post)
