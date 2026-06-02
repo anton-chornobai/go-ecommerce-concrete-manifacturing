@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	// "github.com/anton-chornobai/beton.git/internal/mail"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
 )

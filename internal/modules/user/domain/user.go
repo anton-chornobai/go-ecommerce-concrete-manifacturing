@@ -3,14 +3,15 @@ package domain
 import (
 	"errors"
 	"time"
+	"unicode/utf8"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
 var (
-	ErrUserNotFound     = errors.New("користувача не знайдено")
-	ErrUnauthorized  = errors.New("недостатньо прав")
+	ErrUserNotFound = errors.New("користувача не знайдено")
+	ErrUnauthorized = errors.New("недостатньо прав")
 )
 
 const phoneNumberLength = 9
@@ -37,7 +38,7 @@ type Claims struct {
 }
 
 func CreateUser(number string) (*User, error) {
-	if number == "" || len(number) < phoneNumberLength {
+	if number == "" || utf8.RuneCount([]byte(number)) < phoneNumberLength {
 		return nil, errors.New("invalid phone number")
 	}
 
