@@ -37,7 +37,7 @@ jobs:
 
       - name: Install Goose Migration Tool
         run: |
-curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/install.sh | sh
+          curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/install.sh | sh
           sudo mv goose /usr/local/bin/
 
       - name: Run Database Migrations
