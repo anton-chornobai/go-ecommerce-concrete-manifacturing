@@ -39,17 +39,14 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/sh/goose.sh | sh
           # Move it to system path so the 'goose' command is universally available
           sudo mv goose /usr/local/bin/
-      - name: Run Database Migrations
+    - name: Run Database Migrations
         env:
           # Construct the exact connection string Goose needs
           DB_TEST_CONN_STR: "postgres://beton_test_user:${{ secrets.BETON_TEST_PASSWORD }}@localhost:5432/beton_test?sslmode=disable"
         run: goose -dir ./internal/migrations postgres "$DB_TEST_CONN_STR" up
-      - name: Run Go Tests
+    - name: Run Go Tests
         env:
           SECRET: "super-secret-fake-test-key-123"
           CONFIG_PATH: "configs/config.ci.yaml"
           DB_TEST_CONN_STR: ${{secrets.DB_TEST_CONN_STR}}
         run: go test -v ./...
-
-
-
