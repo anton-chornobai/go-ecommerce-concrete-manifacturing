@@ -47,4 +47,6 @@ jobs:
         env:
           SECRET: "super-secret-fake-test-key-123"
           CONFIG_PATH: "config.ci.yaml"
+
+          DB_TEST_CONN_STR: "postgres://beton_test_user:${{ secrets.BETON_TEST_PASSWORD }}@localhost:5432/beton_test?sslmode=disable"
         run: go test -v ./...
