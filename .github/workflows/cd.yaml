@@ -37,5 +37,6 @@ jobs:
         env:
           SECRET: "super-secret-fake-test-key-123"
           CONFIG_PATH: "configs/config.ci.yaml"
+          DB_TEST_CONN_STR: ${{secrets.DB_TEST_CONN_STR}}
         run: go test -v ./...
 
