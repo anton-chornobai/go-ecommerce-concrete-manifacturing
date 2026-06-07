@@ -1,0 +1,11 @@
+env: "test"
+port: 8080
+
+database:
+  name: beton
+  host: localhost
+  user: beton_user
+  password: 1111
+  port: 5432
+  sslmode: disable
+

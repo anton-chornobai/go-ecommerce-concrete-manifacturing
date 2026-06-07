@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -118,5 +119,79 @@ func TestAdd_DuplicateTitleError(t *testing.T) {
 	err := repo.Add(context.Background(), p2)
 	if !errors.Is(err, domain.ErrTitleAlreadyExists) {
 		t.Fatalf("expected domain.ErrTitleAlreadyExists, got: %v", err)
+	}
+}
+
+// ---- GetProduct
+
+func TestGetProducts_WithPublic(t *testing.T) {
+	clearTables(t)
+
+	ctx := context.Background()
+
+	repo := newRepo()
+
+	total := 10
+	expectedDisplayed := 0
+
+	for i := 0; i < total; i++ {
+		status := domain.ProductArchived
+
+		if i%2 == 0 {
+			status = domain.ProductDisplayed
+			expectedDisplayed++
+		}
+
+		product, err := domain.NewProduct(
+			100+i,
+			fmt.Sprintf("product-%d", i),
+			"test-type",
+			new("red"),
+			status,
+			[]domain.ProductImage{
+				{
+					ID:   uuid.New(),
+					URL:  fmt.Sprintf("https://img/%d.png", i),
+				},
+			},
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+		)
+		if err != nil {
+			t.Fatalf("failed to create product: %v", err)
+		}
+
+		err = repo.Add(ctx, product)
+		if err != nil {
+			t.Fatalf("failed to insert product: %v", err)
+		}
+	}
+
+	status := domain.ProductDisplayed
+
+	productList, err := repo.GetProducts(ctx, 10, &status)
+	if err != nil {
+		t.Fatalf("failed to get products: %v", err)
+	}
+
+	if len(productList) != expectedDisplayed {
+		t.Fatalf(
+			"expected %d displayed products, got %d",
+			expectedDisplayed,
+			len(productList),
+		)
+	}
+
+	for _, product := range productList {
+		if product.Status != domain.ProductDisplayed {
+			t.Errorf(
+				"expected displayed product, got %q (id=%v)",
+				product.Status,
+				product.ID,
+			)
+		}
 	}
 }
