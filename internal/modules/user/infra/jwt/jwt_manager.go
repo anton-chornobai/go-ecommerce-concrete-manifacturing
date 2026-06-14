@@ -67,7 +67,7 @@ func ValidateToken(stringToken string) (map[string]any, error) {
 	}
 
 	if !token.Valid {
-		return nil, errors.New("invalid token1")
+		return nil, errors.New("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
@@ -76,6 +76,31 @@ func ValidateToken(stringToken string) (map[string]any, error) {
 	}
 
 	return map[string]interface{}(claims), nil
+}
+
+func ParseToken(tokenString string) (jwt.MapClaims, error) {
+	secret := os.Getenv("SECRET")
+	if secret == "" {
+		return nil, errors.New("no secret key found")
+	}
+
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
 }
 
 func GetUsersID(tokenString string) (string, error) {

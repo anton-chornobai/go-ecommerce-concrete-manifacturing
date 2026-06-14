@@ -53,7 +53,7 @@ func SetUpRoutes(
 	router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
 	router.Handle("DELETE /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.DeleteByID)))
-	router.Handle("PATCH /v1/products/{id}", http.HandlerFunc(productHandler.Update))
+	router.Handle("PATCH /v1/products/{id}", userMiddleware.AdminOnly(userService,  http.HandlerFunc(productHandler.Update)))
 	//CONTACTS
 	router.HandleFunc("POST /contacts", userContactHandler.Post)
 	router.HandleFunc("DELETE /contacts/{id}", userContactHandler.Delete)

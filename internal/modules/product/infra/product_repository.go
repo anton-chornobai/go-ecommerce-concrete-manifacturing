@@ -19,6 +19,7 @@ type ProductRepository struct {
 }
 
 func (p *ProductRepository) Add(ctx context.Context, product *domain.Product) error {
+
 	var sizeWidth *int
 	var sizeHeight *int
 
@@ -112,11 +113,11 @@ func (p *ProductRepository) GetProducts(ctx context.Context, limit int, status *
 
 	for rows.Next() {
 		var (
-			sizeWidth, sizeHeight          *int
-			imageID                        *uuid.UUID
-			imageURL                       *string
-			imagePosition                  *int
-			imageCreatedAt                 *time.Time
+			sizeWidth, sizeHeight *int
+			imageID               *uuid.UUID
+			imageURL              *string
+			imagePosition         *int
+			imageCreatedAt        *time.Time
 		)
 
 		// temp product to scan into each row
@@ -188,45 +189,88 @@ func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 	var width, height sql.NullInt64
 
 	query := `SELECT 
-		id,
-		price,
-		title,
-		type,
-		image_url,
-		color,
-		description,
-		status,
-		stock_quantity,
-		weight_grams,
-		rating,
-		size_width,
-		size_height
-	FROM products WHERE id=$1;
+		p.id,
+		p.price,
+		p.title,
+		p.type,
+		p.color,
+		p.description,
+		p.status,
+		p.stock_quantity,
+		p.weight_grams,
+		p.rating,
+		p.size_width,
+		p.size_height,
+		p.created_at,
+		p.updated_at,
+		pi.id,
+		pi.url,
+		pi.position,
+		pi.created_at
+	FROM products p
+	LEFT JOIN product_image pi ON pi.product_id = p.id
+	WHERE p.id=$1
+	ORDER BY pi.position ASC
 	`
-
-	row := p.DB.QueryRowContext(ctx, query, id)
-
-	err := row.Scan(
-		&product.ID,
-		&product.Price,
-		&product.Title,
-		&product.Type,
-		&product.ImageURLs,
-		&product.Color,
-		&product.Description,
-		&product.Status,
-		&product.StockQuantity,
-		&product.Weight,
-		&product.Rating,
-		&width,
-		&height,
-	)
-
+	rows, err := p.DB.QueryContext(ctx, query, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("not found row")
+		return nil, fmt.Errorf("GetByID: query error: %w", err)
+	}
+	defer rows.Close()
+	found := false
+
+	for rows.Next() {
+		var (
+			imgID  uuid.NullUUID
+			imgURL sql.NullString
+			imgPosition  sql.NullInt16
+			imgCreatedAt sql.NullTime
+		)
+
+
+		err := rows.Scan(
+			&product.ID,
+			&product.Price,
+			&product.Title,
+			&product.Type,
+			&product.Color,
+			&product.Description,
+			&product.Status,
+			&product.StockQuantity,
+			&product.Weight,
+			&product.Rating,
+			&width,
+			&height,
+			&product.CreatedAt,
+			&product.UpdatedAt,
+			&imgID,
+			&imgURL,
+			&imgPosition,
+			&imgCreatedAt,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("GetByID: scan error: %w", err)
 		}
-		return nil, fmt.Errorf("GetByID: scanning error: %w", err)
+
+		found = true
+
+		if imgID.Valid {
+			product.ImageURLs = append(product.ImageURLs, domain.ProductImage{
+				ID:        imgID.UUID,
+				ProductID: product.ID,
+				URL:       imgURL.String,
+				Position:  int(imgPosition.Int16),
+				CreatedAt: imgCreatedAt.Time,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("GetByID: rows error: %w", err)
+	}
+
+	if !found {
+		return nil, fmt.Errorf("product not found")
 	}
 
 	if width.Valid && height.Valid {
@@ -234,8 +278,6 @@ func (p *ProductRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 			Width:  int(width.Int64),
 			Height: int(height.Int64),
 		}
-	} else {
-		product.Size = nil
 	}
 
 	return &product, nil

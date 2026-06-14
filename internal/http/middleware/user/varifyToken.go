@@ -3,11 +3,14 @@ package middleware
 import (
 	"errors"
 	"net/http"
-
-	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
+	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 )
+
+type contextKey string
+
+const RoleContextKey contextKey = "role"
 
 func VerifyToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,10 +59,10 @@ func AdminOnly(userService *application.UserService, next http.Handler) http.Han
 
 		if err != nil {
 			if errors.Is(err, domain.ErrUnauthorized) {
-				http.Error(w, "недостатньо прав", http.StatusInternalServerError)
-			return
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
-			http.Error(w, "щось пішло не так" + err.Error(), http.StatusInternalServerError)
+			http.Error(w, "щось пішло не так", http.StatusInternalServerError)
 			return
 		}
 
