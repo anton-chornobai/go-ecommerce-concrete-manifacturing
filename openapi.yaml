@@ -1,0 +1,48 @@
+openapi: 3.2.0
+info:
+  title: Beton OpenAPI
+  version: 1.0.0
+  summary: This OpenAPI provides instruction how to use backend handles
+servers:
+  - url: http://localhost:8080
+    description: Local development server (backend server)
+tags:
+  - name: Auth
+    summary: Authentication and Autherization for the users and staff
+    kind: audience and staff
+  - name: Product
+    description: Representig our product. Managment of the products also authorization for the admin panel.
+    kind: audience and staff
+  - name: Order
+    description: Representig the orders of the clients also the orders of the staff (expenses, indirect incomes etc.)
+    kind: audience and staff
+  - name: Contact
+    summary: Receiving contact info and desires from the clients
+    kind: audience
+paths:
+  /v1/products:
+    get:
+      description: Returns all the products within the query params limit if the limit isnt set the limit by default is 20, user has access, such products which have status property - displayed. In order to have access the to the archived u should have admin role.
+      parameters:
+        - name: status
+          in: querystring
+          description:
+          required: false
+
+      operationId: Get Products
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: not-found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrNotFound"
+
+components: 
+  schemas:

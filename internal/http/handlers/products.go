@@ -98,6 +98,7 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	)
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(map[string][]domain.Product{"data": products}); err != nil {
 		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь",
 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
