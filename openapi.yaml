@@ -26,8 +26,12 @@ paths:
       parameters:
         - name: status
           in: querystring
-          description:
+          description: Filter products by status. Admins can pass "archived" to hidden catalog items.
           required: false
+          schema:
+            type: string
+            enum: [displayed, archived]
+            default: displayed
 
       operationId: Get Products
       responses:
@@ -41,8 +45,124 @@ paths:
           description: not-found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrNotFound"
 
-components: 
+
+components:
   schemas:
+    Product:
+      type: object
+      required:
+        - id
+        - price
+        - title
+        - type
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique internal identifier of the product
+          example: 101
+        price:
+          type: integer
+          description: Price in the lowest currency unit (e.g., cents or kopecks) to avoid floating-point issues
+          example: 35000
+        title:
+          type: string
+          description: Name of the concrete product or paving stone
+          example: "Old Town Paving Stone"
+        type:
+          type: string
+          description: Category or material classification type
+          example: "paving_stone"
+        color:
+          type: string
+          nullable: true
+          description: Primary color scheme of the concrete unit
+          example: "Granite Gray"
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+        image_urls:
+          type: array
+          description: Ordered list of product demonstration images
+          items:
+            $ref: "#/components/schemas/ProductImage"
+        description:
+          type: string
+          nullable: true
+          description: Expanded marketing or technical details about the product
+          example: "High-durability concrete paving stone, perfect for walkways and driveways."
+        stock_quantity:
+          type: integer
+          nullable: true
+          description: Available stock units remaining in the warehouse inventory
+          example: 1200
+        weight:
+          type: integer
+          nullable: true
+          description: Unit or batch weight measurements
+          example: 45
+        rating:
+          type: integer
+          nullable: true
+          description: User evaluation metric
+          example: 5
+        size:
+          $ref: "#/components/schemas/Size"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the item was added to the catalog
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the catalog entry was last modified
+
+    ProductStatus:
+      type: string
+      enum: [displayed, archived]
+      example: "displayed"
+
+    ProductImage:
+      type: object
+      required:
+        - id
+        - product_id
+        - position
+        - url
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique image asset ID
+        product_id:
+          type: integer
+          description: Target product owner relationship ID
+          example: 101
+        position:
+          type: integer
+          description: Sorting priority index order for UI image galleries
+          example: 1
+        url:
+          type: string
+          format: uri
+          description: Public CDN or server web address string for the image file
+          example: "https://cdn.beton.com/images/old-town-gray.jpg"
+        created_at:
+          type: string
+          format: date-time
+
+    Size:
+      type: object
+      description: Dimensions blueprint schema mapping to your nested Go Size struct
+      properties:
+        length:
+          type: integer
+          example: 200
+        width:
+          type: integer
+          example: 100
+        thickness:
+          type: integer
+          example: 60
