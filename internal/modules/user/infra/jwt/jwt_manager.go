@@ -16,28 +16,26 @@ func NewTokenService() *TokenService {
 	return &TokenService{}
 }
 
-func (ts *TokenService) GenerateToken(id string) (string, error) {
+func (ts *TokenService) GenerateToken(id string, role string) (string, error) {
 	secret := os.Getenv("SECRET")
 	if secret == "" {
 		return "", errors.New("no secret key found")
 	}
 
-	claims := jwt.RegisteredClaims{
-		Subject:   id,
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-	}
+	now := time.Now()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": claims.Subject,
-		"exp": claims.ExpiresAt.Unix(),
-		"iat": claims.IssuedAt.Unix(),
+		"sub":  id,
+		"role": role,
+		"exp":  now.Add(24 * time.Hour).Unix(),
+		"iat":  now.Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return "", err
 	}
+
 	return tokenString, nil
 }
 

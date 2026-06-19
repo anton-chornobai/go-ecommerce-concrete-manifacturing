@@ -49,7 +49,7 @@ func SetUpRoutes(
 	router.HandleFunc("GET /v1/orders", orderHandler.Get)
 	router.Handle("DELETE /v1/orders/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(orderHandler.Delete)))
 	//PRODUCTS
-	router.Handle("GET /v1/products", http.HandlerFunc(productHandler.GetProducts))
+	router.Handle("GET /v1/products", userMiddleware.GetUsersRoleWithContext(http.HandlerFunc(productHandler.GetProducts)))
 	router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
 	router.Handle("DELETE /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.DeleteByID)))

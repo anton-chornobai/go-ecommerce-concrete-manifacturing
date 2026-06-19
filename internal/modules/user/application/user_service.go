@@ -15,7 +15,7 @@ import (
 
 
 type TokenManager interface {
-	GenerateToken(id string) (string, error)
+	GenerateToken(id string, role string) (string, error)
 }
 
 type VerificationaCodeManager interface {
@@ -111,7 +111,7 @@ func (s *UserService) VerifyUser(ctx context.Context, email, submittedCode strin
 		return "", fmt.Errorf("failed to verify user: %w", err)
 	}
 
-	token, err := s.tokenManager.GenerateToken(user.ID)
+	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate JWT: %w", err)
 	}
@@ -125,7 +125,7 @@ func (s *UserService) Signup(email, number string) (string, error) {
 		return "", err
 	}
 
-	token, err := s.tokenManager.GenerateToken(user.ID)
+	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return "", err
 	}
@@ -157,7 +157,7 @@ func (s *UserService) LoginByEmail(ctx context.Context, email, password string) 
 		return "", ErrAccountNotVerified
 	}
 
-	token, err := s.tokenManager.GenerateToken(user.ID)
+	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
 
 	if err != nil {
 		return "", fmt.Errorf("login failed: %w", err)

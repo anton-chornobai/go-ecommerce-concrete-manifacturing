@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
-	"github.com/gorilla/schema"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
+
+	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
+	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
+	"github.com/gorilla/schema"
 )
 
 const (
@@ -39,7 +41,7 @@ func (h *ProductHandler) handleServiceError(w http.ResponseWriter, r *http.Reque
 			slog.String("помилка", err.Error()),
 		)
 		http.Error(w, err.Error(), http.StatusNotFound)
-	case  errors.Is(err, domain.ErrTitleAlreadyExists):
+	case errors.Is(err, domain.ErrTitleAlreadyExists):
 		http.Error(w, "назва продукту уже існує", http.StatusInternalServerError)
 
 	case errors.Is(err, domain.ErrInvalidPrice),
@@ -75,10 +77,22 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
 	)
 
+	role, _ := r.Context().Value(userMiddleware.RoleContextKey).(string)
+
 	var status *domain.ProductStatus
 	statusVal := r.URL.Query().Get("status")
 	if statusVal == string(domain.ProductArchived) || statusVal == string(domain.ProductDisplayed) {
 		s := domain.ProductStatus(statusVal)
+
+		if s == domain.ProductArchived && role != "admin" {
+			h.logger.WarnContext(ctx, "Спроба доступу до архівованих продуктів без прав",
+				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "GetProducts")),
+				slog.String("role", role),
+			)
+			http.Error(w, "Доступ заборонено", http.StatusForbidden)
+			return
+		}
+
 		status = &s
 	}
 
@@ -106,7 +120,6 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 }
-
 func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

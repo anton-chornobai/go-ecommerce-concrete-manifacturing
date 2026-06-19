@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"net/http"
+
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
@@ -72,5 +74,33 @@ func AdminOnly(userService *application.UserService, next http.Handler) http.Han
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+func GetUsersRoleWithContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("jwt")
+		if err != nil {
+			ctx := context.WithValue(r.Context(), RoleContextKey, "user")
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		claims, err := jwtmanager.ParseToken(cookie.Value)
+		if err != nil {
+			ctx := context.WithValue(r.Context(), RoleContextKey, "user")
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		role, ok := claims["role"].(string)
+		if !ok || role == "" {
+
+			role = "user"
+		}
+
+		ctx := context.WithValue(r.Context(), RoleContextKey, role)
+		next.ServeHTTP(w, r.WithContext(ctx))
+
 	})
 }
