@@ -30,6 +30,7 @@ func main() {
 		log.Fatalf("failed to open db %v", err)
 	}
 	defer db.Close()
+	fmt.Printf("Opened DB connection on port: %d \n", config.DB.Port)
 
 	router := bootstrap.App(db)
 

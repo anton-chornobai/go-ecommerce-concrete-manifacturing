@@ -34,6 +34,7 @@ func NewProductsHandler(productService application.ProductService, logger *slog.
 }
 
 func (h *ProductHandler) handleServiceError(w http.ResponseWriter, r *http.Request, err error) {
+
 	switch {
 	case errors.Is(err, domain.ErrProductNotFound):
 		h.logger.WarnContext(r.Context(), "Продукт не знайдено",
