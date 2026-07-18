@@ -1,0 +1,45 @@
+services:
+  backend:
+    build:
+      context: .
+    container_name: app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8443:8443"
+    env_file:
+      - .env
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migration:
+    image: kukymbr/goose-docker
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOSTNAME}:${DB_PORT}/${DB_NAME}
+    env_file:
+      - .env
+    volumes:
+      - ../backend/internal/migrations:/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  pgdata:

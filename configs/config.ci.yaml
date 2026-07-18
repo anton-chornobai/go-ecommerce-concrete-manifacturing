@@ -1,11 +1,11 @@
 env: "test"
-port: 8080
+port: 8443
 
 database:
   name: beton
-  host: localhost
+  host: postgres
   user: beton_user
-  password: 1111
+  password: 12358
   port: 5432
   sslmode: disable
 

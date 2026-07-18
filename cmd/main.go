@@ -16,7 +16,7 @@ func main() {
 	err := godotenv.Load(".env")
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println("no .env file found, using environment variables")
 	}
 
 	config, err := config.LoadConfig()
@@ -38,7 +38,7 @@ func main() {
 		Addr:    ":" + strconv.Itoa(config.Port),
 		Handler: router,
 	}
-	fmt.Printf("Server is running on port: http://localhost%s\n", myService.Addr)
+	fmt.Printf("Server is running on port: %s\n", myService.Addr)
 	if err := myService.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed %v", err)
 	}
