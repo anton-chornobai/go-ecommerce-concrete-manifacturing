@@ -45,7 +45,7 @@ paths:
           description: not-found
           content:
             application/json:
-
+    post:
 
 components:
   schemas:

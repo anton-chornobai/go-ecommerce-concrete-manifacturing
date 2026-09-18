@@ -57,6 +57,8 @@ func SetUpRoutes(
 	//CONTACTS
 	router.HandleFunc("POST /contacts", userContactHandler.Post)
 	router.HandleFunc("DELETE /contacts/{id}", userContactHandler.Delete)
+	//SWAGGER DOCUMENTATION UI
+	
 
 	return middleware.LogMethodInfo(logger, middleware.CorsMiddleware(router))
 }

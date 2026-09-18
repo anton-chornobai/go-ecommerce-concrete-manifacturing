@@ -26,15 +26,6 @@ type LoginEmailRequest struct {
 	Password string `json:"password"`
 }
 
-// Yet to be implemented
-type SignupNumberRequest struct {
-	Number string `json:"number"`
-}
-
-type LoginNumberRequest struct {
-	Number string `json:"number"`
-}
-
 func (s *AuthHandler) SignupByEmail(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

@@ -7,7 +7,7 @@ import (
 
 func LogMethodInfo(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		slog.Info("METHOD", r.Method + " ", "endpoint", r.URL.Path)
+		slog.Info("ENDPOINT INFO","METHOD", r.Method + " ", "endpoint", r.URL.Path)
 
 		next.ServeHTTP(w, r)
 	})

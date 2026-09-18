@@ -119,24 +119,6 @@ func (s *UserService) VerifyUser(ctx context.Context, email, submittedCode strin
 	return token, nil
 }
 
-func (s *UserService) Signup(email, number string) (string, error) {
-	user, err := domain.CreateUser(number)
-	if err != nil {
-		return "", err
-	}
-
-	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
-	if err != nil {
-		return "", err
-	}
-
-	if err := s.repo.Signup(user); err != nil {
-		return "", err
-	}
-
-	return token, nil
-}
-
 func (s *UserService) LoginByEmail(ctx context.Context, email, password string) (string, error) {
 	err := utils.ValidatePasswordAndEmail(email, password)
 	if err != nil {
