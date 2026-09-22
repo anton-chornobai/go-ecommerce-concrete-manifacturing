@@ -28,7 +28,7 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	limitStr := r.URL.Query().Get("limit")
-	limit := 10
+	limit := 20
 
 	if limitStr != "" {
 		l, err := strconv.Atoi(limitStr)
@@ -97,7 +97,7 @@ func (o *OrdersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(map[string]any{
 		"id": id,

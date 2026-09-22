@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,9 +12,6 @@ import (
 	"github.com/anton-chornobai/beton.git/internal/db"
 	"github.com/joho/godotenv"
 )
-
-//go:embed swagger.html
-var swaggerUI embed.FS
 
 func main() {
 	err := godotenv.Load(".env")

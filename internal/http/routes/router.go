@@ -4,12 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	// "github.com/anton-chornobai/beton.git/internal/http/handlers"
 	"github.com/anton-chornobai/beton.git/internal/http/handlers"
 	user_handler "github.com/anton-chornobai/beton.git/internal/http/handlers/user"
 
-	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
 	"github.com/anton-chornobai/beton.git/internal/http/middleware"
+	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	productService "github.com/anton-chornobai/beton.git/internal/modules/product/application"
@@ -45,20 +44,23 @@ func SetUpRoutes(
 	//PROFILE
 	router.HandleFunc("GET /profile", userHandler.GetByID)
 	//ORDERS
-	router.HandleFunc("POST /v1/orders", userMiddleware.GetUsersID(http.HandlerFunc(orderHandler.Create)))
 	router.HandleFunc("GET /v1/orders", orderHandler.Get)
+	router.HandleFunc("POST /v1/orders", userMiddleware.GetUsersID(http.HandlerFunc(orderHandler.Create)))
 	router.Handle("DELETE /v1/orders/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(orderHandler.Delete)))
 	//PRODUCTS
 	router.Handle("GET /v1/products", userMiddleware.GetUsersRoleWithContext(http.HandlerFunc(productHandler.GetProducts)))
 	router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
 	router.Handle("DELETE /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.DeleteByID)))
-	router.Handle("PATCH /v1/products/{id}", userMiddleware.AdminOnly(userService,  http.HandlerFunc(productHandler.Update)))
+	router.Handle("PATCH /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.Update)))
 	//CONTACTS
 	router.HandleFunc("POST /contacts", userContactHandler.Post)
 	router.HandleFunc("DELETE /contacts/{id}", userContactHandler.Delete)
 	//SWAGGER DOCUMENTATION UI
-	
+	router.Handle(
+		"/swagger/",
+		http.StripPrefix("/swagger/", handlers.SwaggerDocHandler()),
+	)
 
 	return middleware.LogMethodInfo(logger, middleware.CorsMiddleware(router))
 }
