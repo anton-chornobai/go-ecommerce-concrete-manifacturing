@@ -44,7 +44,6 @@ paths:
               - archived
               - all
             default: displayed
-
       responses:
         "200":
           description: Products returned successfully.
@@ -54,9 +53,22 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Product"
-
+        "403":
+          description: Access forbidden.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Доступ заборонено"
         "404":
           description: Products not found.
+        "500":
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Щось пішло не так"
 
     post:
       operationId: createProduct
