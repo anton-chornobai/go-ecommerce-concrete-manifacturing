@@ -28,7 +28,7 @@ func main() {
 	connStr := db.GetDBConnStr(config.DB)
 	db, err := db.OpenPostgre(connStr)
 	if err != nil {
-		log.Fatalf("failed to open db %v", err)
+		log.Fatal(err)
 	}
 	defer db.Close()
 	fmt.Printf("Opened DB connection on port: %d \n", config.DB.Port)
