@@ -3,7 +3,7 @@ port: 8080
 
 database:
   name: beton
-  host: localhost
+  host: postgres
   user: beton_user
   password: 12358
   port: 5432
