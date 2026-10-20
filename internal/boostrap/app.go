@@ -25,7 +25,7 @@ import (
 )
 
 func App(db *sql.DB) http.Handler {
-	ctx := context.Background()
+	// ctx := context.Background()
 	//LOGGER
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	//PASSWORD HASHER FOR USERS SERVICE
@@ -37,11 +37,11 @@ func App(db *sql.DB) http.Handler {
 	//USER
 	userRepo := &infra.UserRepository{DB: db}
 	userService := application.NewUserService(userRepo, tokenManager, passwordHasher, log, verificationCodeManager)
-	// Google Cloud Platform
-	GCPUploader := productInfra.NewGCPUploader(NewGCSClient(ctx))
+	// AWS S3 Image Storage
+	// storage := productInfra.NewCloudStorageClient(NewGCSClient(ctx))
 	//PRODUCTS
 	productRepo := &productInfra.ProductRepository{DB: db}
-	productService, err := productService.NewProductService(productRepo, GCPUploader, log)
+	productService, err := productService.NewProductService(productRepo, nil, log)
 	if err != nil {
 		log.Error("failed to create product service", "error", err)
 		panic(err)
@@ -53,7 +53,7 @@ func App(db *sql.DB) http.Handler {
 	userContactRepo := &userContactRepo.UserContactRepository{DB: db}
 	userContactService := service.NewUserContactService(userContactRepo)
 
-	router := routes.SetUpRoutes(log, userService, orderService, *productService, *userContactService)
+	router := routes.SetUpRoutes(log, userService, orderService, productService, *userContactService)
 
 	return router
 }

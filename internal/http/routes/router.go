@@ -19,7 +19,7 @@ func SetUpRoutes(
 	logger *slog.Logger,
 	userService *userService.UserService,
 	orderService *application.OrderService,
-	productService productService.ProductService,
+	productService *productService.ProductService,
 	userContactService contactService.UserContactService,
 ) http.Handler {
 	authHandler := user_handler.AuthHandler{
@@ -49,7 +49,7 @@ func SetUpRoutes(
 	router.Handle("DELETE /v1/orders/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(orderHandler.Delete)))
 	//PRODUCTS
 	router.Handle("GET /v1/products", userMiddleware.GetUsersRoleWithContext(http.HandlerFunc(productHandler.GetProducts)))
-	router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
+	// router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
 	router.Handle("DELETE /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.DeleteByID)))
 	router.Handle("PATCH /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.Update)))

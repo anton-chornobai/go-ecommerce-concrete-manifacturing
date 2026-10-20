@@ -2,27 +2,30 @@ package application
 
 import (
 	"context"
-	"errors"
+	// "errors"
+	// "github.com/google/uuid"
+
+	// "errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
 
 	"mime/multipart"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
-	"github.com/google/uuid"
+	// "github.com/google/uuid"
 )
 
 type ProductService struct {
-	imageStorage domain.GCSUploader
+	imageStorage ImageStorage
 	repo         domain.Repository
 	logger       *slog.Logger
 }
 
-func NewProductService(repo domain.Repository, uploader domain.GCSUploader, logger *slog.Logger) (*ProductService, error) {
+func NewProductService(repo domain.Repository, uploader ImageStorage, logger *slog.Logger) (*ProductService, error) {
 	return &ProductService{repo: repo, imageStorage: uploader, logger: logger}, nil
 }
 func (p *ProductService) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
@@ -58,77 +61,77 @@ func (p *ProductService) GetById(ctx context.Context, id int) (*domain.Product, 
 	return product, nil
 }
 
-func (p *ProductService) Add(
-	ctx context.Context,
-	input *dto.ProductPostRequest,
-	headers []*multipart.FileHeader,
-) error {
-	if input == nil {
-		p.logger.ErrorContext(ctx, "Вхідні дані відсутні")
-		return errors.New("input data is required")
-	}
+// func (p *ProductService) Add(
+// 	ctx context.Context,
+// 	input *dto.ProductPostRequest,
+// 	headers []*multipart.FileHeader,
+// ) error {
+// 	if input == nil {
+// 		p.logger.ErrorContext(ctx, "Вхідні дані відсутні")
+// 		return errors.New("input data is required")
+// 	}
 
-	uploadedURLs, err := p.imageStorage.UploadMultipleFiles(ctx, headers)
-	if err != nil {
-		p.logger.ErrorContext(ctx, "Не вдалося завантажити зображення",
-			slog.Group("source", slog.String("layer", "service"), slog.String("func", "Add")),
-			slog.String("помилка", err.Error()),
-		)
-		return fmt.Errorf("upload failed: %w", err)
-	}
+// 	uploadedURLs, err := p.imageStorage.UploadMultipleFiles(ctx, headers)
+// 	if err != nil {
+// 		p.logger.ErrorContext(ctx, "Не вдалося завантажити зображення",
+// 			slog.Group("source", slog.String("layer", "service"), slog.String("func", "Add")),
+// 			slog.String("помилка", err.Error()),
+// 		)
+// 		return fmt.Errorf("upload failed: %w", err)
+// 	}
 
-	//converting from string to ProductImage struct
-	images := make([]domain.ProductImage, len(uploadedURLs))
-	for i, url := range uploadedURLs {
-		images[i] = domain.ProductImage{
-			ID:       uuid.New(),
-			Position: i,
-			URL:      url,
-		}
-	}
+// 	//converting from string to ProductImage struct
+// 	images := make([]domain.ProductImage, len(uploadedURLs))
+// 	for i, url := range uploadedURLs {
+// 		images[i] = domain.ProductImage{
+// 			ID:       uuid.New(),
+// 			Position: i,
+// 			URL:      url,
+// 		}
+// 	}
 
-	var size *domain.Size
-	if input.SizeHeight != nil && input.SizeWidth != nil {
-		size = &domain.Size{
-			Width:  *input.SizeWidth,
-			Height: *input.SizeHeight,
-		}
-	}
+// 	var size *domain.Size
+// 	if input.SizeHeight != nil && input.SizeWidth != nil {
+// 		size = &domain.Size{
+// 			Width:  *input.SizeWidth,
+// 			Height: *input.SizeHeight,
+// 		}
+// 	}
 
-	product, err := domain.NewProduct(
-		input.Price,
-		input.Title,
-		input.Type,
-		input.Color,
-		input.Status,
-		images,
-		input.StockQuantity,
-		input.Description,
-		input.Weight,
-		input.Rating,
-		size,
-	)
-	if err != nil {
-		p.logger.ErrorContext(ctx, "Не вдалося створити продукт — помилка валідації",
-			slog.String("назва", input.Title),
-			slog.String("помилка", err.Error()),
-		)
-		return err
-	}
+// 	product, err := domain.NewProduct(
+// 		input.Price,
+// 		input.Title,
+// 		input.Type,
+// 		input.Color,
+// 		input.Status,
+// 		images,
+// 		input.StockQuantity,
+// 		input.Description,
+// 		input.Weight,
+// 		input.Rating,
+// 		size,
+// 	)
+// 	if err != nil {
+// 		p.logger.ErrorContext(ctx, "Не вдалося створити продукт — помилка валідації",
+// 			slog.String("назва", input.Title),
+// 			slog.String("помилка", err.Error()),
+// 		)
+// 		return err
+// 	}
 
-	if err := p.repo.Add(ctx, product); err != nil {
-		p.logger.ErrorContext(ctx, "Не вдалося зберегти продукт у базі даних",
-			slog.String("назва", input.Title),
-			slog.String("помилка", err.Error()),
-		)
-		return err
-	}
+// 	if err := p.repo.Add(ctx, product); err != nil {
+// 		p.logger.ErrorContext(ctx, "Не вдалося зберегти продукт у базі даних",
+// 			slog.String("назва", input.Title),
+// 			slog.String("помилка", err.Error()),
+// 		)
+// 		return err
+// 	}
 
-	p.logger.InfoContext(ctx, "Продукт успішно створено",
-		slog.String("назва", input.Title),
-	)
-	return nil
-}
+// 	p.logger.InfoContext(ctx, "Продукт успішно створено",
+// 		slog.String("назва", input.Title),
+// 	)
+// 	return nil
+// }
 
 func (p *ProductService) DeleteByID(ctx context.Context, id int) error {
 	product, err := p.repo.GetByID(ctx, id)

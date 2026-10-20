@@ -12,7 +12,6 @@ import (
 	"time"
 
 	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
 	"github.com/gorilla/schema"
@@ -25,11 +24,28 @@ const (
 var decoder = schema.NewDecoder()
 
 type ProductHandler struct {
-	ProductService application.ProductService
+	ProductService ProductService
 	logger         *slog.Logger
 }
 
-func NewProductsHandler(productService application.ProductService, logger *slog.Logger) *ProductHandler {
+type ProductService interface {
+	DeleteByID(ctx context.Context, id int) error
+	GetById(ctx context.Context, id int) (*domain.Product, error)
+	GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error)
+	Update(
+		ctx context.Context,
+		id int, req dto.ProductPatchRequest,
+		file multipart.File,
+		header *multipart.FileHeader,
+	) error
+	// Add(
+	// 	ctx context.Context,
+	// 	input *dto.ProductPostRequest,
+	// 	headers []*multipart.FileHeader,
+	// ) error
+}
+
+func NewProductsHandler(productService ProductService, logger *slog.Logger) *ProductHandler {
 	return &ProductHandler{ProductService: productService, logger: logger}
 }
 
@@ -170,66 +186,66 @@ func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
-	defer cancel()
+// func (h *ProductHandler) Add(w http.ResponseWriter, r *http.Request) {
+// 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+// 	defer cancel()
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxBytesBodyLimit)
+// 	r.Body = http.MaxBytesReader(w, r.Body, maxBytesBodyLimit)
 
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			h.logger.WarnContext(ctx, "Тіло запиту занадто велике",
-				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
-				slog.Int64("ліміт_байт", maxBytesErr.Limit),
-			)
-			http.Error(w, fmt.Sprintf("Тіло запиту занадто велике (максимум %dmb)", maxBytesBodyLimit>>20), http.StatusRequestEntityTooLarge)
-		} else {
-			h.logger.WarnContext(ctx, "Неправильний формат тіла запиту",
-				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
-				slog.String("помилка", err.Error()),
-			)
-			http.Error(w, "Неправильний формат запиту", http.StatusBadRequest)
-		}
-		return
-	}
+// 	if err := r.ParseMultipartForm(10 << 20); err != nil {
+// 		var maxBytesErr *http.MaxBytesError
+// 		if errors.As(err, &maxBytesErr) {
+// 			h.logger.WarnContext(ctx, "Тіло запиту занадто велике",
+// 				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+// 				slog.Int64("ліміт_байт", maxBytesErr.Limit),
+// 			)
+// 			http.Error(w, fmt.Sprintf("Тіло запиту занадто велике (максимум %dmb)", maxBytesBodyLimit>>20), http.StatusRequestEntityTooLarge)
+// 		} else {
+// 			h.logger.WarnContext(ctx, "Неправильний формат тіла запиту",
+// 				slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+// 				slog.String("помилка", err.Error()),
+// 			)
+// 			http.Error(w, "Неправильний формат запиту", http.StatusBadRequest)
+// 		}
+// 		return
+// 	}
 
-	parsedForm := new(dto.ProductPostRequest)
-	if err := decoder.Decode(parsedForm, r.PostForm); err != nil {
-		h.logger.WarnContext(ctx, "Помилка декодування форми",
-			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
-			slog.String("помилка", err.Error()),
-		)
-		http.Error(w, "Помилка декодування: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+// 	parsedForm := new(dto.ProductPostRequest)
+// 	if err := decoder.Decode(parsedForm, r.PostForm); err != nil {
+// 		h.logger.WarnContext(ctx, "Помилка декодування форми",
+// 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+// 			slog.String("помилка", err.Error()),
+// 		)
+// 		http.Error(w, "Помилка декодування: "+err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
 
-	files := r.MultipartForm.File["attachments"]
-	fmt.Println(len(files))
-	if len(files) < 1 {
-		http.Error(w, "Потрібно мінімум одне фото для продукту щоб його створити", http.StatusBadRequest)
-		return
-	}
+// 	files := r.MultipartForm.File["attachments"]
+// 	fmt.Println(len(files))
+// 	if len(files) < 1 {
+// 		http.Error(w, "Потрібно мінімум одне фото для продукту щоб його створити", http.StatusBadRequest)
+// 		return
+// 	}
 
-	if err := h.ProductService.Add(ctx, parsedForm, files); err != nil {
-		h.handleServiceError(w, r, err)
-		return
-	}
+// 	if err := h.ProductService.Add(ctx, parsedForm, files); err != nil {
+// 		h.handleServiceError(w, r, err)
+// 		return
+// 	}
 
-	h.logger.InfoContext(ctx, "Продукт успішно створено",
-		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
-		slog.String("назва", parsedForm.Title),
-	)
+// 	h.logger.InfoContext(ctx, "Продукт успішно створено",
+// 		slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+// 		slog.String("назва", parsedForm.Title),
+// 	)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": "Продукт створений"}); err != nil {
-		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь після створення",
-			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
-			slog.String("помилка", err.Error()),
-		)
-	}
-}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusCreated)
+// 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "Продукт створений"}); err != nil {
+// 		h.logger.ErrorContext(ctx, "Не вдалося закодувати відповідь після створення",
+// 			slog.Group("source", slog.String("layer", "handler"), slog.String("func", "Add")),
+// 			slog.String("помилка", err.Error()),
+// 		)
+// 	}
+// }
 
 func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
