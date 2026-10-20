@@ -41,7 +41,7 @@ jobs:
       - name: Run Database Migrations
         env:
           DB_TEST_CONN_STR: "postgres://beton_test_user:${{ secrets.BETON_TEST_PASSWORD }}@localhost:5432/beton_test?sslmode=disable"
-        run: goose -dir ./internal/migrations postgres "$DB_TEST_CONN_STR" up
+        run: goose -dir ./migrations postgres "$DB_TEST_CONN_STR" up
 
       - name: Run Go Tests
         env:

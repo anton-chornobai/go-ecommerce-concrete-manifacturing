@@ -10,7 +10,7 @@ import (
 
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/domain"
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/dto"
-	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
+	"github.com/anton-chornobai/beton.git/internal/modules/contact/application"
 )
 
 type UserContactHandler struct {

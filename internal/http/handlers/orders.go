@@ -4,14 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
+	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
+	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
-	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
-	"github.com/anton-chornobai/beton.git/internal/modules/orders/domain"
+)
+
+const (
+	defaultOrderLimit = 20
+	minOrderLimit     = 1
+	maxOrderLimit     = 100
 )
 
 type OrdersHandler struct {
@@ -28,7 +34,7 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	limitStr := r.URL.Query().Get("limit")
-	limit := 20
+	limit := defaultOrderLimit
 
 	if limitStr != "" {
 		l, err := strconv.Atoi(limitStr)
@@ -36,7 +42,7 @@ func (o *OrdersHandler) Get(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid limit", http.StatusBadRequest)
 			return
 		}
-		limit = l
+		limit = max(min(l, maxOrderLimit), minOrderLimit)
 	}
 
 	orders, err := o.OrdersService.Get(ctx, limit)

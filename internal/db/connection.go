@@ -15,6 +15,8 @@ func OpenPostgre(connStr string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db, %v", err)
 	}
+
+	fmt.Println(connStr)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -28,12 +30,12 @@ func OpenPostgre(connStr string) (*sql.DB, error) {
 
 func GetDBConnStr(cfg config.DBConfig) string {
 	return fmt.Sprintf(
-		"postgresql://%s:%d@%s:%d/%s?sslmode=%s",
+		"postgresql://%s:%s@%s:%d/%s?sslmode=%s",
 		cfg.User,
 		cfg.Password,
 		cfg.Host,
 		cfg.Port,
 		cfg.Name,
-		cfg.SSLmode,
+		cfg.SSLMode,
 	)
 }

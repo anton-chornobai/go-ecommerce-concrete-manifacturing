@@ -27,21 +27,26 @@ const (
 )
 
 type Order struct {
-	ID                 int           `json:"id"`
-	Total              int           `json:"total"`
-	CustomerName       string        `json:"customer_name"`
-	UserID             string        `json:"user_id"`
-	OrderName          string        `json:"order_name"`
-	Items              []OrderItem   `json:"items"`
-	Status             OrderStatus   `json:"status"`
-	PaymentStatus      PaymentStatus `json:"payment_status"`
-	CustomerNumber     *string       `json:"customer_number,omitempty"`
-	Discount           *int          `json:"discount,omitempty"`
-	ShippingAddress    *string       `json:"shipping_address,omitempty"`
-	ShippingCity       *string       `json:"shipping_city,omitempty"`
-	ShippingPostalCode *string       `json:"shipping_postal_code,omitempty"`
-	CreatedAt          time.Time     `json:"created_at"`
-	UpdatedAt          time.Time     `json:"updated_at"`
+	ID             int           `json:"id"`
+
+	//Customer 
+	CustomerName   string        `json:"customer_name"`
+	CustomerNumber *string       `json:"customer_number,omitempty"`
+	UserID         string        `json:"user_id"`
+	Total          int           `json:"total"`
+	OrderName      string        `json:"order_name"`
+	Description    *string       `json:"description,omitempty"`
+	
+	Items          []OrderItem   `json:"items"`
+	Status         OrderStatus   `json:"status"`
+	PaymentStatus  PaymentStatus `json:"payment_status"`
+
+	Discount           *int      `json:"discount,omitempty"`
+	ShippingAddress    *string   `json:"shipping_address,omitempty"`
+	ShippingCity       *string   `json:"shipping_city,omitempty"`
+	ShippingPostalCode *string   `json:"shipping_postal_code,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 type Size struct {

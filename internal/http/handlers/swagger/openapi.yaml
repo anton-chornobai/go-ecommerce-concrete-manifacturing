@@ -36,7 +36,8 @@ paths:
         - name: status
           in: query
           description: Filter products by status.
-          required: false
+            The values "archived" and "all" require authentication with the admin role.
+          required: true
           schema:
             type: string
             enum:
@@ -44,6 +45,25 @@ paths:
               - archived
               - all
             default: displayed
+
+        - name: limit
+          in: query
+          description: Maximum number of products to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+
+        - name: offset
+          in: query
+          description: Offset for the requested products.
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
       responses:
         "200":
           description: Products returned successfully.
@@ -54,7 +74,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Product"
         "403":
-          description: Access forbidden.
+          description: Access forbidden, for users who dont have admin role.
           content:
             text/plain:
               schema:
@@ -108,6 +128,39 @@ paths:
             type: integer
             minimum: 0
             default: 0
+        - name: status
+          in: query
+          description: Helps  admin to monitor/observe the orders.
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - confirmed
+              - shipped
+              - delivered
+              - cancelled
+        - name: search
+          in: query
+          required: false
+          description: Searching client by their customer_name
+          schema:
+            type: string
+        - name: created_from
+          in: query
+          required: false
+          description: Used to range the order after this timestamp.
+          schema:
+            type: string
+            format: date-time
+
+        - name: created_to
+          in: query
+          required: false
+          description: Used to range the order before this timestamp.
+          schema:
+            type: string
+            format: date-time
 
       responses:
         "200":
@@ -295,7 +348,60 @@ components:
     Order:
       type: object
       description: Order information.
+      required:
+        - id
+        - total
+        - customer_name
+        - user_id
+        - order_name
+        - items
+        - status
+        - payment_status
+
       properties:
         id:
           type: integer
-          example: 1001
+        total:
+          type: integer
+        customer_name:
+          type: string
+        user_id:
+          type: string
+        order_name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        status:
+        payment_status:
+          type:
+          $ref: "#/components/schemas/OrderItem"
+        customer_number:
+          type: string
+          nullable: true
+        discount:
+          type: integer
+          minimum: 0
+          nullable: true
+        shipping_address:
+          type: string
+          nullable: true
+        shipping_city:
+          type: string
+          nullable: true
+        shipping_postal_code:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+  OrderItem:
+    type: object
+    properties:
+      id:
+        type: integer
+      

@@ -17,7 +17,7 @@ import (
 	productInfra "github.com/anton-chornobai/beton.git/internal/modules/product/infra"
 
 	userContactRepo "github.com/anton-chornobai/beton.git/internal/modules/contact/infra"
-	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
+	"github.com/anton-chornobai/beton.git/internal/modules/contact/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
 

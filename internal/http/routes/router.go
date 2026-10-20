@@ -9,7 +9,7 @@ import (
 
 	"github.com/anton-chornobai/beton.git/internal/http/middleware"
 	userMiddleware "github.com/anton-chornobai/beton.git/internal/http/middleware/user"
-	"github.com/anton-chornobai/beton.git/internal/modules/contact/service"
+	contactService "github.com/anton-chornobai/beton.git/internal/modules/contact/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	productService "github.com/anton-chornobai/beton.git/internal/modules/product/application"
 	userService "github.com/anton-chornobai/beton.git/internal/modules/user/application"
@@ -20,7 +20,7 @@ func SetUpRoutes(
 	userService *userService.UserService,
 	orderService *application.OrderService,
 	productService productService.ProductService,
-	userContactService service.UserContactService,
+	userContactService contactService.UserContactService,
 ) http.Handler {
 	authHandler := user_handler.AuthHandler{
 		UserService: userService,
