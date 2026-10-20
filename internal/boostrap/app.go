@@ -14,7 +14,7 @@ import (
 	ordersApp "github.com/anton-chornobai/beton.git/internal/modules/orders/application"
 	ordersRepo "github.com/anton-chornobai/beton.git/internal/modules/orders/infra"
 	productService "github.com/anton-chornobai/beton.git/internal/modules/product/application"
-	productInfra "github.com/anton-chornobai/beton.git/internal/modules/product/infra"
+	productRepo "github.com/anton-chornobai/beton.git/internal/modules/product/infra/postgres"
 
 	userContactRepo "github.com/anton-chornobai/beton.git/internal/modules/contact/infra"
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/application"
@@ -40,7 +40,7 @@ func App(db *sql.DB) http.Handler {
 	// AWS S3 Image Storage
 	// storage := productInfra.NewCloudStorageClient(NewGCSClient(ctx))
 	//PRODUCTS
-	productRepo := &productInfra.ProductRepository{DB: db}
+	productRepo := &productRepo.ProductRepository{DB: db}
 	productService, err := productService.NewProductService(productRepo, nil, log)
 	if err != nil {
 		log.Error("failed to create product service", "error", err)
