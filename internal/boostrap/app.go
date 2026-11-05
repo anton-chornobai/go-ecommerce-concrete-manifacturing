@@ -3,12 +3,12 @@ package bootstrap
 import (
 	"context"
 	"database/sql"
-	"log"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 
-	"cloud.google.com/go/storage"
+	"github.com/anton-chornobai/beton.git/internal/config"
 	"github.com/anton-chornobai/beton.git/internal/http/routes"
 
 	ordersApp "github.com/anton-chornobai/beton.git/internal/modules/orders/application"
@@ -16,16 +16,20 @@ import (
 	productService "github.com/anton-chornobai/beton.git/internal/modules/product/application"
 	productRepo "github.com/anton-chornobai/beton.git/internal/modules/product/infra/postgres"
 
-	userContactRepo "github.com/anton-chornobai/beton.git/internal/modules/contact/infra"
 	"github.com/anton-chornobai/beton.git/internal/modules/contact/application"
+	userContactRepo "github.com/anton-chornobai/beton.git/internal/modules/contact/infra"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/application"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/infra"
 
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
+
+	s3storage "github.com/anton-chornobai/beton.git/internal/modules/product/infra/image_storage"
+	awsservice "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func App(db *sql.DB) http.Handler {
-	// ctx := context.Background()
+func App(db *sql.DB, cfg *config.Config) http.Handler {
+	ctx := context.Background()
 	//LOGGER
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	//PASSWORD HASHER FOR USERS SERVICE
@@ -37,11 +41,15 @@ func App(db *sql.DB) http.Handler {
 	//USER
 	userRepo := &infra.UserRepository{DB: db}
 	userService := application.NewUserService(userRepo, tokenManager, passwordHasher, log, verificationCodeManager)
+
 	// AWS S3 Image Storage
-	// storage := productInfra.NewCloudStorageClient(NewGCSClient(ctx))
-	//PRODUCTS
+	imageStorage, err := NewS3Storage(ctx, cfg)
+	if err != nil {
+		log.Error("failed to initialize S3 storage", "error", err)
+		panic(err)
+	}
 	productRepo := &productRepo.ProductRepository{DB: db}
-	productService, err := productService.NewProductService(productRepo, nil, log)
+	productService, err := productService.NewProductService(productRepo, imageStorage, log)
 	if err != nil {
 		log.Error("failed to create product service", "error", err)
 		panic(err)
@@ -58,11 +66,16 @@ func App(db *sql.DB) http.Handler {
 	return router
 }
 
-func NewGCSClient(ctx context.Context) *storage.Client {
-	client, err := storage.NewClient(ctx)
+func NewS3Storage(ctx context.Context, cfg *config.Config) (*s3storage.S3Storage, error) {
+	awsCfg, err := awsservice.LoadDefaultConfig(
+		ctx, awsservice.WithRegion(cfg.S3.Region),
+	)
+
 	if err != nil {
-		log.Fatalf("failed to create GCS client: %v", err)
+		return nil, fmt.Errorf("load AWS configuration: %w", err)
 	}
 
-	return client
+	client := s3.NewFromConfig(awsCfg)
+
+	return s3storage.NewS3Storage(client, cfg.S3.Bucket, cfg.S3.CloudFrontURL), nil
 }

@@ -33,7 +33,7 @@ func main() {
 	defer db.Close()
 	fmt.Printf("Opened DB connection on port: %d \n", config.DB.Port)
 
-	router := bootstrap.App(db)
+	router := bootstrap.App(db, config)
 
 	myService := &http.Server{
 		Addr:    ":" + strconv.Itoa(config.Port),

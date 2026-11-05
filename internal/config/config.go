@@ -1,4 +1,3 @@
-
 package config
 
 import (
@@ -9,8 +8,9 @@ import (
 
 type Config struct {
 	Env  string
-	DB   DBConfig
 	Port int
+	DB   DBConfig
+	S3   S3Config
 }
 
 type DBConfig struct {
@@ -20,6 +20,12 @@ type DBConfig struct {
 	Password string
 	SSLMode  string
 	Port     int
+}
+
+type S3Config struct {
+	Region        string
+	Bucket        string
+	CloudFrontURL string
 }
 
 func LoadConfig() (*Config, error) {
@@ -44,6 +50,15 @@ func LoadConfig() (*Config, error) {
 			SSLMode:  os.Getenv("DB_SSLMODE"),
 			Port:     dbPort,
 		},
+		S3: S3Config{
+			Bucket:        os.Getenv("S3_BUCKET_NAME"),
+			Region:        os.Getenv("AWS_REGION"),
+			CloudFrontURL: os.Getenv("CLOUDFRONT_URL"),
+		},
+	}
+
+	if cfg.Port < 1 || cfg.Port > 65535 {
+		return nil, fmt.Errorf("HTTP_PORT must be between 1 and 65535")
 	}
 
 	if cfg.DB.Name == "" {
@@ -61,11 +76,21 @@ func LoadConfig() (*Config, error) {
 	if cfg.DB.Port < 1 || cfg.DB.Port > 65535 {
 		return nil, fmt.Errorf("DB_PORT must be between 1 and 65535")
 	}
-	if cfg.Port < 1 || cfg.Port > 65535 {
-		return nil, fmt.Errorf("HTTP_PORT must be between 1 and 65535")
-	}
+
 	if cfg.DB.SSLMode == "" {
 		cfg.DB.SSLMode = "disable"
+	}
+
+	if cfg.S3.Bucket == "" {
+		return nil, fmt.Errorf("S3_BUCKET_NAME is required")
+	}
+
+	if cfg.S3.Region == "" {
+		return nil, fmt.Errorf("AWS_REGION is required")
+	}
+
+	if cfg.S3.CloudFrontURL == "" {
+		return nil, fmt.Errorf("CLOUDFRONT_URL is required")
 	}
 
 	return cfg, nil

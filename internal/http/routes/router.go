@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/anton-chornobai/beton.git/internal/http/handlers"
+	product_handler "github.com/anton-chornobai/beton.git/internal/http/handlers/products"
 	user_handler "github.com/anton-chornobai/beton.git/internal/http/handlers/user"
 
 	"github.com/anton-chornobai/beton.git/internal/http/middleware"
@@ -26,7 +27,7 @@ func SetUpRoutes(
 		UserService: userService,
 	}
 
-	productHandler := handlers.NewProductsHandler(productService, logger)
+	productHandler := product_handler.NewProductsHandler(productService, logger)
 
 	userHandler := user_handler.UserHandler{
 		UserService: userService,
@@ -48,8 +49,10 @@ func SetUpRoutes(
 	router.HandleFunc("POST /v1/orders", userMiddleware.GetUsersID(http.HandlerFunc(orderHandler.Create)))
 	router.Handle("DELETE /v1/orders/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(orderHandler.Delete)))
 	//PRODUCTS
+	router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Create)))
+
 	router.Handle("GET /v1/products", userMiddleware.GetUsersRoleWithContext(http.HandlerFunc(productHandler.GetProducts)))
-	// router.Handle("POST /v1/products", userMiddleware.AdminOnly(userHandler.UserService, http.HandlerFunc(productHandler.Add)))
+
 	router.Handle("GET /v1/products/{id}", http.HandlerFunc(productHandler.GetProductByID))
 	router.Handle("DELETE /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.DeleteByID)))
 	router.Handle("PATCH /v1/products/{id}", userMiddleware.AdminOnly(userService, http.HandlerFunc(productHandler.Update)))

@@ -74,6 +74,7 @@ func (s *AuthHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid payload credentials", http.StatusBadRequest)
+		return
 	}
 
 	token, err := s.UserService.LoginByEmail(ctx, req.Email, req.Password)

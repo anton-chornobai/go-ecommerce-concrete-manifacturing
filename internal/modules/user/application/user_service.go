@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/anton-chornobai/beton.git/internal/mail"
 	"github.com/anton-chornobai/beton.git/internal/modules/user/domain"
 	jwtmanager "github.com/anton-chornobai/beton.git/internal/modules/user/infra/jwt"
 	"github.com/anton-chornobai/beton.git/pkg/utils"
@@ -48,75 +47,86 @@ func NewUserService(repo domain.Repository, tokenManager TokenManager, passwordH
 	}
 }
 
-func (s *UserService) SignupByEmail(ctx context.Context, email, password string) error {
+func (s *UserService) SignupByEmail(
+    ctx context.Context,
+    email, password string,
+) error {
+    if err := utils.ValidatePasswordAndEmail(email, password); err != nil {
+        return err
+    }
 
-	err := utils.ValidatePasswordAndEmail(email, password)
+    hashedPassword, err := s.passwordHasher.HashPassword(password)
+    if err != nil {
+        return fmt.Errorf("signup failed: %w", err)
+    }
 
-	if err != nil {
-		return err
-	}
+    user := domain.CreateUserWithEmail(email, hashedPassword)
 
-	hashedPassword, err := s.passwordHasher.HashPassword(password)
-	if err != nil {
-		return fmt.Errorf("signup failed: %w", err)
-	}
+    verificationCode, err := s.verificationManager.GenerateCode()
+    if err != nil {
+        s.log.Warn("failed to generate verification code")
+        return fmt.Errorf("failed to generate verification code: %w", err)
+    }
 
-	user := domain.CreateUserWithEmail(email, hashedPassword)
+    hashedVerificationCode := s.verificationManager.HashVerificationCode(verificationCode)
+    expiresAt := time.Now().UTC().Add(15 * time.Minute)
 
-	verificationCode, err := s.verificationManager.GenerateCode()
+    if err := s.repo.SignupByEmail(
+        ctx,
+        user,
+        hashedVerificationCode,
+        &expiresAt,
+    ); err != nil {
+        return fmt.Errorf("signup failed: %w", err)
+    }
 
-	if err != nil {
-		s.log.Warn("failed to generate verification code")
-		return fmt.Errorf("failed to generate verification code: %w", err)
-	}
-	hashedVerificationCode := s.verificationManager.HashVerificationCode(verificationCode)
-	expiresAt := time.Now().UTC().Add(15 * time.Minute)
+    s.sendVerificationEmail(user.Email, verificationCode)
 
-	if err := s.repo.SignupByEmail(ctx, user, hashedVerificationCode, &expiresAt); err != nil {
-		return fmt.Errorf("signup failed: %w", err)
-	}
-	// Sending email aync
-	go func(email, code string) {
-		if err := mail.SendEmailTo(email, code); err != nil {
-			s.log.Error("could not send verification code", "email", email, "err", err)
-		}
-	}(user.Email, verificationCode)
-
-	return nil
+    return nil
 }
 
-func (s *UserService) VerifyUser(ctx context.Context, email, submittedCode string) (string, error) {
-	user, err := s.repo.GetByEmail(ctx, email)
+func (s *UserService) VerifyUser(
+    ctx context.Context,
+    email, submittedCode string,
+) (string, error) {
+    user, err := s.repo.GetByEmail(ctx, email)
+    if err != nil {
+        return "", fmt.Errorf("get user by email: %w", err)
+    }
 
-	if user.VerificationExpiresAt == nil || user.VerificationExpiresAt.Before(time.Now()) {
-		return "", fmt.Errorf("verification code expired %w", err)
-	}
-	if err != nil {
-		return "", err
-	}
+    if user == nil {
+        return "", domain.ErrUserNotFound
+    }
 
-	if user.IsVerified {
-		return "", fmt.Errorf("user already verified")
-	}
+    if user.IsVerified {
+        return "", fmt.Errorf("user already verified")
+    }
 
-	if user.VerificationExpiresAt.Before(time.Now()) {
-		return "", fmt.Errorf("verification code expired")
-	}
+    if user.VerificationExpiresAt == nil {
+        return "", fmt.Errorf("verification expiration is missing")
+    }
 
-	if !s.verificationManager.CompareHashAndCode(user.VerificationHash, submittedCode) {
-		return "", fmt.Errorf("invalid verification code")
-	}
+    if user.VerificationExpiresAt.Before(time.Now().UTC()) {
+        return "", fmt.Errorf("verification code expired")
+    }
 
-	if err := s.repo.MarkUserVerified(ctx, email); err != nil {
-		return "", fmt.Errorf("failed to verify user: %w", err)
-	}
+    if !s.verificationManager.CompareHashAndCode(
+        user.VerificationHash,
+        submittedCode,
+    ) {
+        return "", fmt.Errorf("invalid verification code")
+    }
 
-	token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate JWT: %w", err)
-	}
+    if err := s.repo.MarkUserVerified(ctx, email); err != nil {
+        return "", fmt.Errorf("failed to verify user: %w", err)
+    }
 
-	return token, nil
+    token, err := s.tokenManager.GenerateToken(user.ID, user.Role)
+    if err != nil {
+        return "", fmt.Errorf("failed to generate JWT: %w", err)
+    }
+
+    return token, nil
 }
 
 func (s *UserService) LoginByEmail(ctx context.Context, email, password string) (string, error) {

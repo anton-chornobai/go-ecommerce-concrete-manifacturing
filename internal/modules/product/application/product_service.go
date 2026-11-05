@@ -2,21 +2,10 @@ package application
 
 import (
 	"context"
-	// "errors"
-	// "github.com/google/uuid"
-
-	// "errors"
-	"fmt"
+	"io"
 	"log/slog"
-	"path/filepath"
-
-	"mime/multipart"
-	"strings"
-	"time"
-
+	"github.com/google/uuid"
 	"github.com/anton-chornobai/beton.git/internal/modules/product/domain"
-	"github.com/anton-chornobai/beton.git/internal/modules/product/dto"
-	// "github.com/google/uuid"
 )
 
 type ProductService struct {
@@ -25,9 +14,15 @@ type ProductService struct {
 	logger       *slog.Logger
 }
 
-func NewProductService(repo domain.Repository, uploader ImageStorage, logger *slog.Logger) (*ProductService, error) {
-	return &ProductService{repo: repo, imageStorage: uploader, logger: logger}, nil
+type ImageStorage interface {
+	Upload(ctx context.Context, file io.Reader, filename string, contentType string) (string, error)
+	Delete(ctx context.Context, imgURL string) error
 }
+
+func NewProductService(repo domain.Repository, storage ImageStorage, logger *slog.Logger) (*ProductService, error) {
+	return &ProductService{repo: repo, imageStorage: storage, logger: logger}, nil
+}
+
 func (p *ProductService) GetProducts(ctx context.Context, limit int, status *domain.ProductStatus) ([]domain.Product, error) {
 	products, err := p.repo.GetProducts(ctx, limit, status)
 	if err != nil {
@@ -45,193 +40,13 @@ func (p *ProductService) GetProducts(ctx context.Context, limit int, status *dom
 	return products, nil
 }
 
-func (p *ProductService) GetById(ctx context.Context, id int) (*domain.Product, error) {
+func (p *ProductService) GetById(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
 	product, err := p.repo.GetByID(ctx, id)
 	if err != nil {
 		p.logger.ErrorContext(ctx, "Не вдалося отримати продукт за id",
-			slog.Int("id", id),
 			slog.String("помилка", err.Error()),
 		)
 		return nil, err
 	}
-
-	p.logger.InfoContext(ctx, "Продукт отримано",
-		slog.Int("id", id),
-	)
 	return product, nil
-}
-
-// func (p *ProductService) Add(
-// 	ctx context.Context,
-// 	input *dto.ProductPostRequest,
-// 	headers []*multipart.FileHeader,
-// ) error {
-// 	if input == nil {
-// 		p.logger.ErrorContext(ctx, "Вхідні дані відсутні")
-// 		return errors.New("input data is required")
-// 	}
-
-// 	uploadedURLs, err := p.imageStorage.UploadMultipleFiles(ctx, headers)
-// 	if err != nil {
-// 		p.logger.ErrorContext(ctx, "Не вдалося завантажити зображення",
-// 			slog.Group("source", slog.String("layer", "service"), slog.String("func", "Add")),
-// 			slog.String("помилка", err.Error()),
-// 		)
-// 		return fmt.Errorf("upload failed: %w", err)
-// 	}
-
-// 	//converting from string to ProductImage struct
-// 	images := make([]domain.ProductImage, len(uploadedURLs))
-// 	for i, url := range uploadedURLs {
-// 		images[i] = domain.ProductImage{
-// 			ID:       uuid.New(),
-// 			Position: i,
-// 			URL:      url,
-// 		}
-// 	}
-
-// 	var size *domain.Size
-// 	if input.SizeHeight != nil && input.SizeWidth != nil {
-// 		size = &domain.Size{
-// 			Width:  *input.SizeWidth,
-// 			Height: *input.SizeHeight,
-// 		}
-// 	}
-
-// 	product, err := domain.NewProduct(
-// 		input.Price,
-// 		input.Title,
-// 		input.Type,
-// 		input.Color,
-// 		input.Status,
-// 		images,
-// 		input.StockQuantity,
-// 		input.Description,
-// 		input.Weight,
-// 		input.Rating,
-// 		size,
-// 	)
-// 	if err != nil {
-// 		p.logger.ErrorContext(ctx, "Не вдалося створити продукт — помилка валідації",
-// 			slog.String("назва", input.Title),
-// 			slog.String("помилка", err.Error()),
-// 		)
-// 		return err
-// 	}
-
-// 	if err := p.repo.Add(ctx, product); err != nil {
-// 		p.logger.ErrorContext(ctx, "Не вдалося зберегти продукт у базі даних",
-// 			slog.String("назва", input.Title),
-// 			slog.String("помилка", err.Error()),
-// 		)
-// 		return err
-// 	}
-
-// 	p.logger.InfoContext(ctx, "Продукт успішно створено",
-// 		slog.String("назва", input.Title),
-// 	)
-// 	return nil
-// }
-
-func (p *ProductService) DeleteByID(ctx context.Context, id int) error {
-	product, err := p.repo.GetByID(ctx, id)
-	if err != nil {
-		p.logger.ErrorContext(ctx, "Не вдалося знайти продукт для видалення",
-			slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
-			slog.Int("id", id),
-			slog.String("помилка", err.Error()),
-		)
-		return err
-	}
-
-	if err := p.repo.DeleteByID(ctx, id); err != nil {
-		p.logger.ErrorContext(ctx, "Не вдалося видалити продукт з бази даних",
-			slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
-			slog.Int("id", id),
-			slog.String("помилка", err.Error()),
-		)
-		return err
-	}
-
-	for _, image := range product.ImageURLs {
-		if err := p.imageStorage.Delete(ctx, image.URL); err != nil {
-			p.logger.WarnContext(ctx, "Не вдалося видалити зображення з GCS",
-				slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
-				slog.Int("product_id", id),
-				slog.String("url", image.URL),
-				slog.String("помилка", err.Error()),
-			)
-		}
-	}
-
-	p.logger.InfoContext(ctx, "Продукт успішно видалено",
-		slog.Group("source", slog.String("layer", "service"), slog.String("func", "DeleteByID")),
-		slog.Int("id", id),
-		slog.Int("видалено_зображень", len(product.ImageURLs)),
-	)
-	return nil
-}
-
-func (p *ProductService) Update(
-	ctx context.Context,
-	id int,
-	req dto.ProductPatchRequest,
-	file multipart.File,
-	header *multipart.FileHeader,
-) error {
-	patch := domain.ProductPatch{
-		Price:         req.Price,
-		Title:         req.Title,
-		Type:          req.Type,
-		Status:        req.Status,
-		Color:         req.Color,
-		Description:   req.Description,
-		StockQuantity: req.StockQuantity,
-		Weight:        req.Weight,
-		Rating:        req.Rating,
-		SizeWidth:     req.SizeWidth,
-		SizeHeight:    req.SizeHeight,
-	}
-
-	if file != nil && header != nil {
-		ext := filepath.Ext(header.Filename)
-		nameOnly := strings.TrimSuffix(header.Filename, ext)
-		uniqueName := fmt.Sprintf("%s_%d%s", nameOnly, time.Now().Unix(), ext)
-
-		url, err := p.imageStorage.Upload(ctx, file, uniqueName)
-		if err != nil {
-			p.logger.ErrorContext(ctx, "Не вдалося завантажити зображення для оновлення",
-				slog.Int("id", id),
-				slog.String("файл", uniqueName),
-				slog.String("помилка", err.Error()),
-			)
-			return err
-		}
-		p.logger.InfoContext(ctx, "Зображення для продукту оновлено",
-			slog.Int("id", id),
-			slog.String("url", url),
-		)
-		patch.ImageURL = &url
-	}
-
-	if err := patch.Validate(); err != nil {
-		p.logger.WarnContext(ctx, "Невалідні дані для оновлення продукту",
-			slog.Int("id", id),
-			slog.String("помилка", err.Error()),
-		)
-		return err
-	}
-
-	if err := p.repo.Patch(ctx, id, &patch); err != nil {
-		p.logger.ErrorContext(ctx, "Не вдалося оновити продукт у базі даних",
-			slog.Int("id", id),
-			slog.String("помилка", err.Error()),
-		)
-		return err
-	}
-
-	p.logger.InfoContext(ctx, "Продукт успішно оновлено",
-		slog.Int("id", id),
-	)
-	return nil
 }

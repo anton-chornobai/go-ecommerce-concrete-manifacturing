@@ -25,6 +25,8 @@ var (
 	ErrTitleAlreadyExists = errors.New("назва продукту вже існує")
 	ErrNegativeWidth      = errors.New("ширина не може бути від'ємною")
 	ErrNegativeHeight     = errors.New("висота не може бути від'ємною")
+
+	ErrNegativeImagePosition = errors.New("позиція не може бути негативною")
 )
 
 type ProductStatus string
@@ -44,32 +46,31 @@ func (s ProductStatus) IsValid() bool {
 }
 
 type Product struct {
-	ID            int            `json:"id"`
-	Price         int            `json:"price"`
-	Title         string         `json:"title"`
-	Type          string         `json:"type"`
-	Color         *string        `json:"color,omitempty"`
-	Status        ProductStatus  `json:"status"`
-	ImageURLs     []ProductImage `json:"image_urls,omitempty"`
-	Description   *string        `json:"description,omitempty"`
-	StockQuantity *int           `json:"stock_quantity,omitempty"`
-	Weight        *int           `json:"weight,omitempty"`
-	Rating        *int           `json:"rating,omitempty"`
-	Size          *Size          `json:"size,omitempty"`
-	CreatedAt     time.Time      `json:"created_at,omitempty"`
-	UpdatedAt     time.Time      `json:"updated_at,omitempty"`
+	ID            uuid.UUID
+	Price         int
+	Title         string
+	Type          string
+	Color         *string
+	Status        ProductStatus
+	ImageURLs     []ProductImage
+	Description   *string
+	StockQuantity *int
+	Weight        *int
+	Rating        *int
+	Size          *Size
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type ProductImage struct {
-	ID        uuid.UUID `json:"id"`
-	ProductID int       `json:"product_id"`
-	Position  int       `json:"position"`
-	URL       string    `json:"url"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID
+	Position  int
+	Key       string
+	CreatedAt time.Time
 }
 type Size struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
+	Width  int
+	Height int
 }
 
 type ProductPatch struct {
@@ -87,6 +88,19 @@ type ProductPatch struct {
 	ImageURL      *string
 }
 
+func NewProductImage(position int, url string) (*ProductImage, error) {
+	if position < 0 {
+		return nil, ErrNegativeImagePosition
+	}
+
+	return &ProductImage{
+		uuid.New(),
+		position,
+		url,
+		time.Now(),
+	}, nil
+}
+
 func NewProduct(
 	price int,
 	title string,
@@ -101,6 +115,7 @@ func NewProduct(
 	size *Size,
 ) (*Product, error) {
 	p := &Product{
+		ID:            uuid.New(),
 		Price:         price,
 		Title:         title,
 		Type:          productType,
